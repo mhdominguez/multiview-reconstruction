@@ -22,7 +22,11 @@ env:
 deploy:
   provider: releases
   api_key: 
-  #travis encrypt -r mhdominguez/multiview-reconstruction GITHUB_API_KEY_HERE_NO_QUOTES
+  #console lines to generate the "secure" line...
+    #sudo apt install ruby
+    #sudo gem install travis
+    #travis travis login --pro --github-token GITHUB_API_KEY_HERE_NO_QUOTES
+    #travis encrypt -r mhdominguez/multiview-reconstruction --pro GITHUB_API_KEY_HERE_NO_QUOTES
   - secure: "u0WKJ+eNP9lRvNAeoeANghAD1viw8fKcLa3ljNv4mdZAHjrv0Wn4FY/1caeB3e8AsQh50DOYRydKACvTz1inqE4OhnMYhHKctmhzSR/txZ8J4/gIeG0eXEKXt5npIazUj8nCZFv30nBqfb3eDgmuVF3Vi4hqEP7mlbz6Zdfrzdyyb9dti7KK3sSt0g4RA4/59s+gXKm7avX2z5OBiPG7OJBfSUJ70xbzGHBv4O6dnjcSuZN8RNX8jig6NytKrRFe8CFpA7VIBTLU76nGYNaJN1ApapCJ6JP0qhvpoYDUD7ZdtOiRqf2l/WU75CSa89eUglrBQODlaT0phXwDiC4nRhdhQOOTopXVHyHMvmrJ5dLfd52oeTJDlnDpzB2Gu4Df7U6eIX+ULntkoLZWcfax5o3H7mMFntZcVsZHlyc6NhWsgsqtlJbzIm1YRdjfxJXByjri/nNgPHldV/tAVWv8s3EJ09RuIU9nRK28nC+fDcbDLOr5v3Ruh82uAtDrYixOvMxSlJgsdhgD1lOdswG1FfqGFJeZxY32RQQPtbYsDCZFzQQY48skK2uLQfOfYOyP/WAuF7M2o8OErK5J9RfDFDURFLXz7cXqkJBXfBuqbWstHbvcXBxcigMG0XTs7g3uK01noEYNcAvdWd/rXnehPOOL1uglWLAqbAcEYMpj8lQ="
   file_glob: true
   file: target/*.jar
