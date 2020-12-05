@@ -4,6 +4,7 @@ jdk: openjdk8
 branches:
   only:
   - master
+  - advanced-fusion-options
   - "/.*-[0-9]+\\..*/"
 before_install:
   - sudo apt-get update
