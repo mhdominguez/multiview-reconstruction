@@ -48,7 +48,7 @@ public class ManageFusionDialogListeners
 	final FusionGUI fusion;
 	
 	double anisoF;
-	final TextField downsampleZField,
+	final TextField downsampleZField;
 
 	public ManageFusionDialogListeners(
 			final GenericDialog gd,
