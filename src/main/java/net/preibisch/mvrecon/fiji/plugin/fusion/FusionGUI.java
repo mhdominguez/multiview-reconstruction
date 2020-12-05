@@ -197,7 +197,7 @@ public class FusionGUI implements FusionExportInterface
 		final boolean enableNonRigid = NonRigidParametersGUI.enableNonRigid;
 		final Choice boundingBoxChoice, pixelTypeChoice, cachingChoice, nonrigidChoice, splitChoice;
 		final TextField downsampleField;
-		TextField downsampleZField = String.valueOf(avgAnisoF);
+		TextField downsampleZField = null;
 		final Checkbox contentbasedCheckbox, anisoCheckbox;
 
 		final String[] choices = FusionGUI.getBoundingBoxChoices( allBoxes );
