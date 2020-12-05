@@ -6,6 +6,7 @@ branches:
   - master
   - advanced-fusion-options
   - "/.*-[0-9]+\\..*/"
+  - advanced-fusion-options
 before_install:
   - sudo apt-get update
   - sudo apt-get install -y openjfx libopenjfx-java libopenjfx-jni

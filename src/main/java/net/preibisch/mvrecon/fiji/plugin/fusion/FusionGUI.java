@@ -197,6 +197,7 @@ public class FusionGUI implements FusionExportInterface
 		final boolean enableNonRigid = NonRigidParametersGUI.enableNonRigid;
 		final Choice boundingBoxChoice, pixelTypeChoice, cachingChoice, nonrigidChoice, splitChoice;
 		final TextField downsampleField;
+		TextField downsampleZField = null;
 		final Checkbox contentbasedCheckbox, anisoCheckbox;
 
 		final String[] choices = FusionGUI.getBoundingBoxChoices( allBoxes );
@@ -250,8 +251,12 @@ public class FusionGUI implements FusionExportInterface
 
 		if ( avgAnisoF > 1.01 ) // for numerical instabilities (computed upon instantiation)
 		{
-			gd.addCheckbox( "Preserve_original data anisotropy (shrink image " + TransformationTools.f.format( avgAnisoF ) + " times in z) ", defaultPreserveAnisotropy );
+
+			gd.addCheckbox( "Preserve_original data anisotropy (shrink image below times in z) ", defaultPreserveAnisotropy );
 			anisoCheckbox = PluginHelper.isHeadless() ? null : (Checkbox)gd.getCheckboxes().lastElement();
+			gd.addSlider( "  Downsampling in Z", 1.0, 16.0, avgAnisoF );
+			downsampleZField = PluginHelper.isHeadless() ? null : (TextField)gd.getNumericFields().lastElement();
+			
 			gd.addMessage(
 					"WARNING: Enabling this means to 'shrink' the dataset in z the same way the input\n" +
 					"images were scaled. Only use this if this is not a multiview dataset.", GUIHelper.smallStatusFont, GUIHelper.warning );
@@ -282,6 +287,7 @@ public class FusionGUI implements FusionExportInterface
 					nonrigidChoice,
 					contentbasedCheckbox,
 					anisoCheckbox,
+					downsampleZField,
 					splitChoice,
 					label1,
 					label2,
@@ -337,8 +343,15 @@ public class FusionGUI implements FusionExportInterface
 			preserveAnisotropy = defaultPreserveAnisotropy = false;
 
 		if ( !preserveAnisotropy )
+		{
 			avgAnisoF = Double.NaN;
-
+			gd.getNextNumber();
+		}
+		else
+		{
+			avgAnisoF = gd.getNextNumber();
+		}
+		
 		splittingType = defaultSplittingType = gd.getNextChoiceIndex();
 		imgExport = defaultImgExportAlgorithm = gd.getNextChoiceIndex();
 

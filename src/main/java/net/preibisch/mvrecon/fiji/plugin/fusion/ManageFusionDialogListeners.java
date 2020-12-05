@@ -46,8 +46,9 @@ public class ManageFusionDialogListeners
 	final Label label1;
 	final Label label2;
 	final FusionGUI fusion;
-
+	
 	double anisoF;
+	final TextField downsampleZField;
 
 	public ManageFusionDialogListeners(
 			final GenericDialog gd,
@@ -58,6 +59,7 @@ public class ManageFusionDialogListeners
 			final Choice nonRigidChoice,
 			final Checkbox contentbasedCheckbox,
 			final Checkbox anisoCheckbox,
+			final TextField downsampleZField,
 			final Choice splitChoice,
 			final Label label1,
 			final Label label2,
@@ -71,6 +73,7 @@ public class ManageFusionDialogListeners
 		this.nonRigidChoice = nonRigidChoice;
 		this.contentbasedCheckbox = contentbasedCheckbox;
 		this.anisoCheckbox = anisoCheckbox;
+		this.downsampleZField = downsampleZField;
 		this.splitChoice = splitChoice;
 		this.label1 = label1;
 		this.label2 = label2;
@@ -103,6 +106,8 @@ public class ManageFusionDialogListeners
 			this.anisoF = fusion.getAnisotropyFactor();
 			this.anisoCheckbox.addItemListener( new ItemListener() { @Override
 				public void itemStateChanged(ItemEvent e) { update(); } });
+			this.downsampleZField.addTextListener( new TextListener() { @Override
+				public void textValueChanged(TextEvent e) { update(); } });
 		}
 	}
 
@@ -119,7 +124,7 @@ public class ManageFusionDialogListeners
 			fusion.preserveAnisotropy = anisoCheckbox.getState();
 			
 			if ( fusion.preserveAnisotropy )
-				this.anisoF = fusion.getAnisotropyFactor();
+				this.anisoF = Double.parseDouble( downsampleZField.getText() ); //fusion.getAnisotropyFactor();
 			else
 				this.anisoF = 1.0;
 		}
