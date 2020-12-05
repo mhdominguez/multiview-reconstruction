@@ -254,7 +254,7 @@ public class FusionGUI implements FusionExportInterface
 
 			gd.addCheckbox( "Preserve_original data anisotropy (shrink image below times in z) ", defaultPreserveAnisotropy );
 			anisoCheckbox = PluginHelper.isHeadless() ? null : (Checkbox)gd.getCheckboxes().lastElement();
-			gd.addSlider( "  Downsampling in Z", 1.0, 16.0, avgAnisoF );
+			gd.addSlider( "  Downsampling in Z", 1.0, 16.0, avgAnisoF, 0.0001 );
 			downsampleZField = PluginHelper.isHeadless() ? null : (TextField)gd.getNumericFields().lastElement();
 			
 			gd.addMessage(
