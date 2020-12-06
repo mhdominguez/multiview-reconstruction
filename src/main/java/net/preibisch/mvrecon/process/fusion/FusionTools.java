@@ -99,6 +99,7 @@ import net.preibisch.mvrecon.process.fusion.transformed.TransformWeight;
 import net.preibisch.mvrecon.process.fusion.transformed.weightcombination.CombineWeightsRandomAccessibleInterval;
 import net.preibisch.mvrecon.process.fusion.transformed.weightcombination.CombineWeightsRandomAccessibleInterval.CombineType;
 import net.preibisch.mvrecon.process.downsampling.DownsampleTools;
+import net.preibisch.mvrecon.process.downsampling.Downsample;
 import net.preibisch.mvrecon.process.interestpointregistration.TransformationTools;
 import net.preibisch.mvrecon.process.interestpointregistration.pairwise.constellation.grouping.Group;
 
@@ -387,6 +388,16 @@ public class FusionTools
 		final Pair< Interval, AffineTransform3D > scaledBB = createDownsampledBoundingBox( is_2d ? bBox2d : boundingBox, downsampling );
 		final Interval bb = scaledBB.getA();
 		final AffineTransform3D bbTransform = scaledBB.getB();
+		
+		//for downscaled weight images with content based fusion; declare the bounding box arrays but don't provide values unless they will be used
+		final double downsamplingContentBased;
+		if ( useContentBased > 0 )
+		{
+			if ( useContentBased > 2 ) //0=0, 1=1, 2=2, 3=4
+				downsamplingContentBased = 4.0;
+			else
+				downsamplingContentBased = Double.valueOf(useContentBased);
+		}
 
 		final ArrayList< RandomAccessibleInterval< FloatType > > images = new ArrayList<>();
 		final ArrayList< RandomAccessibleInterval< FloatType > > weights = new ArrayList<>();
@@ -436,11 +447,36 @@ public class FusionTools
 				{
 					final double[] sigma1 = Util.getArrayFromValue( defaultContentBasedSigma1, 3 );
 					final double[] sigma2 = Util.getArrayFromValue( defaultContentBasedSigma2, 3 );
+					if ( useContentBased > 1 )
+					{
+						//get the scale factors
+						final long[] scalefactors = new long[ 3 ];
+						for ( int d = 0; d < 3; ++d )
+							scalefactors[ d ] = 1.0 / downsamplingContentBased;
+						
+						//initialize new image construct, then downsample 
+						RandomAccessibleInterval inputImg_cb = DownsampleTools.downsample( inputImg, scalefactors );
+					
+						//get new AffineTransform3D for adjusting convolution kernels
+						AffineTransform3D model_cb_down = model.copy();
+						TransformVirtual.scaleTransform( model_cb_down, 1.0 / downsamplingContentBased );
+						
+						// adjust both for z-scaling (anisotropy), downsampling, and registrations itself
+						adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, model_cb_down );
+						
+						//get new AffineTransform3D for re-up-scaling weight image
+						AffineTransform3D model_cb_up = model.copy();
+						TransformVirtual.scaleTransform( model_cb_up, downsamplingContentBased );
 
-					// adjust both for z-scaling (anisotropy), downsampling, and registrations itself
-					adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, model );
+						transformedContentBased = TransformWeight.transformContentBased( inputImg_cb, new CellImgFactory< ComplexFloatType >(), sigma1, sigma2, model_cb_up, bb );
+					}
+					else
+					{
+						// adjust both for z-scaling (anisotropy), downsampling, and registrations itself
+						adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, model );
 
-					transformedContentBased = TransformWeight.transformContentBased( inputImg, new CellImgFactory< ComplexFloatType >(), sigma1, sigma2, model, bb );
+						transformedContentBased = TransformWeight.transformContentBased( inputImg, new CellImgFactory< ComplexFloatType >(), sigma1, sigma2, model, bb );
+					}
 				}
 
 				if ( useContentBased > 0 && useBlending )
