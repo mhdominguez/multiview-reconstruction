@@ -503,7 +503,7 @@ public class FusionTools
 						//get the scale factors
 						final long[] scalefactors = new long[ 3 ];
 						for ( int d = 0; d < 3; ++d )
-							scalefactors[ d ] = 1.0 / (long)downsamplingContentBased;
+							scalefactors[ d ] = (long) ( 1.0 / downsamplingContentBased );
 						
 						//initialize new image construct, then downsample 
 						RandomAccessibleInterval inputImg_cb = Downsample.downsample( inputImg, scalefactors );
