@@ -261,7 +261,30 @@ public class FusionTools
 	{
 		return fuseVirtual( spimData, viewIds, true, false, 1, bb, downsampling, intensityAdjustments );
 	}
-
+	
+	//this is an overloaded placeholder to overcome type matching errors when fuseVirtual is called with bool useContentBased
+	public static Pair< RandomAccessibleInterval< FloatType >, AffineTransform3D > fuseVirtual(
+			final AbstractSpimData< ? > spimData,
+			final Collection< ? extends ViewId > views,
+			final boolean useBlending,
+			final boolean useContentBased,
+			final int interpolation,
+			final Interval boundingBox,
+			final double downsampling,
+			final Map< ? extends ViewId, AffineModel1D > intensityAdjustments )
+	{
+		return fuseVirtual( spimData,
+				   views,
+				   useBlending,
+				   (useContentBased ? 1 : 0),
+				   interpolation,
+				   boundingBox,
+				   downsampling,
+				   intensityAdjustments
+				  );
+		
+	}
+	//below method was modified with useContentBased to integer type
 	public static Pair< RandomAccessibleInterval< FloatType >, AffineTransform3D > fuseVirtual(
 			final AbstractSpimData< ? > spimData,
 			final Collection< ? extends ViewId > views,
@@ -330,7 +353,35 @@ public class FusionTools
 		bbDS.dimensions( dim );
 		return new FinalInterval( dim );
 	}
-
+	
+	//this is an overloaded placeholder to overcome type matching errors when fuseVirtual is called with bool useContentBased
+	public static Pair< RandomAccessibleInterval< FloatType >, AffineTransform3D > fuseVirtual(
+			final BasicImgLoader imgloader,
+			final Map< ViewId, AffineTransform3D > registrations,
+			final Map< ViewId, ? extends BasicViewDescription< ? > > viewDescriptions,
+			final Collection< ? extends ViewId > views,
+			final boolean useBlending,
+			final boolean useContentBased,
+			final int interpolation,
+			final Interval boundingBox,
+			final double downsampling,
+			final Map< ? extends ViewId, AffineModel1D > intensityAdjustments )
+	{
+		return fuseVirtual(
+			imgloader,
+			registrations,
+			viewDescriptions,
+			views,
+			useBlending,
+			(useContentBased ? 1 : 0),
+			interpolation,
+			boundingBox,
+			downsampling,
+			intensityAdjustments			
+			);
+	}
+	
+	//below method was modified with useContentBased to integer type
 	public static Pair< RandomAccessibleInterval< FloatType >, AffineTransform3D > fuseVirtual(
 			final BasicImgLoader imgloader,
 			final Map< ViewId, AffineTransform3D > registrations,
@@ -452,10 +503,10 @@ public class FusionTools
 						//get the scale factors
 						final long[] scalefactors = new long[ 3 ];
 						for ( int d = 0; d < 3; ++d )
-							scalefactors[ d ] = 1.0 / downsamplingContentBased;
+							scalefactors[ d ] = 1.0 / (long)downsamplingContentBased;
 						
 						//initialize new image construct, then downsample 
-						RandomAccessibleInterval inputImg_cb = DownsampleTools.downsample( inputImg, scalefactors );
+						RandomAccessibleInterval inputImg_cb = Downsample.downsample( inputImg, scalefactors );
 					
 						//get new AffineTransform3D for adjusting convolution kernels
 						AffineTransform3D model_cb_down = model.copy();
