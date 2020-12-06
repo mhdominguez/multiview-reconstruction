@@ -449,6 +449,10 @@ public class FusionTools
 			else
 				downsamplingContentBased = Double.valueOf(useContentBased);
 		}
+		else
+		{
+			downsamplingContentBased = 1.0;
+		}
 
 		final ArrayList< RandomAccessibleInterval< FloatType > > images = new ArrayList<>();
 		final ArrayList< RandomAccessibleInterval< FloatType > > weights = new ArrayList<>();
