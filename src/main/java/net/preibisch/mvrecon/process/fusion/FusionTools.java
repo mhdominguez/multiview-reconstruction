@@ -265,7 +265,7 @@ public class FusionTools
 			final AbstractSpimData< ? > spimData,
 			final Collection< ? extends ViewId > views,
 			final boolean useBlending,
-			final boolean useContentBased,
+			final int useContentBased,
 			final int interpolation,
 			final Interval boundingBox,
 			final double downsampling,
@@ -336,7 +336,7 @@ public class FusionTools
 			final Map< ViewId, ? extends BasicViewDescription< ? > > viewDescriptions,
 			final Collection< ? extends ViewId > views,
 			final boolean useBlending,
-			final boolean useContentBased,
+			final int useContentBased,
 			final int interpolation,
 			final Interval boundingBox,
 			final double downsampling,
@@ -415,7 +415,7 @@ public class FusionTools
 			images.add( TransformView.transformView( inputImg, model, bb, 0, interpolation ) );
 
 			// add all (or no) weighting schemes
-			if ( useBlending || useContentBased )
+			if ( useBlending || useContentBased > 0 )
 			{
 				RandomAccessibleInterval< FloatType > transformedBlending = null, transformedContentBased = null;
 
@@ -432,7 +432,7 @@ public class FusionTools
 				}
 	
 				// instantiate content based if necessary
-				if ( useContentBased )
+				if ( useContentBased > 0 )
 				{
 					final double[] sigma1 = Util.getArrayFromValue( defaultContentBasedSigma1, 3 );
 					final double[] sigma2 = Util.getArrayFromValue( defaultContentBasedSigma2, 3 );
@@ -443,7 +443,7 @@ public class FusionTools
 					transformedContentBased = TransformWeight.transformContentBased( inputImg, new CellImgFactory< ComplexFloatType >(), sigma1, sigma2, model, bb );
 				}
 
-				if ( useContentBased && useBlending )
+				if ( useContentBased > 0 && useBlending )
 				{
 					weights.add( new CombineWeightsRandomAccessibleInterval(
 									new FinalInterval( transformedBlending ),
@@ -455,7 +455,7 @@ public class FusionTools
 				{
 					weights.add( transformedBlending );
 				}
-				else if ( useContentBased )
+				else if ( useContentBased > 0 )
 				{
 					weights.add( transformedContentBased );
 				}
