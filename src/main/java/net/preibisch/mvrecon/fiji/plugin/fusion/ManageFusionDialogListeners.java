@@ -41,8 +41,8 @@ public class ManageFusionDialogListeners
 {
 	final GenericDialog gd;
 	final TextField downsampleField;
-	final Choice boundingBoxChoice, pixelTypeChoice, cachingChoice, nonRigidChoice, splitChoice;
-	final Checkbox contentbasedCheckbox, anisoCheckbox;
+	final Choice boundingBoxChoice, pixelTypeChoice, cachingChoice, nonRigidChoice, splitChoice, contentbasedCheckbox;
+	final Checkbox anisoCheckbox;
 	final Label label1;
 	final Label label2;
 	final FusionGUI fusion;
@@ -57,7 +57,7 @@ public class ManageFusionDialogListeners
 			final Choice pixelTypeChoice,
 			final Choice cachingChoice,
 			final Choice nonRigidChoice,
-			final Checkbox contentbasedCheckbox,
+			final Choice contentbasedCheckbox,
 			final Checkbox anisoCheckbox,
 			final TextField downsampleZField,
 			final Choice splitChoice,
@@ -117,7 +117,7 @@ public class ManageFusionDialogListeners
 		fusion.downsampling = Integer.parseInt( downsampleField.getText() );
 		fusion.pixelType = pixelTypeChoice.getSelectedIndex();
 		fusion.cacheType = cachingChoice.getSelectedIndex();
-		fusion.useContentBased = contentbasedCheckbox.getState();
+		fusion.useContentBased = contentbasedCheckbox.getSelectedIndex();
 		fusion.splittingType = splitChoice.getSelectedIndex();
 		if ( anisoCheckbox != null )
 		{
@@ -189,7 +189,7 @@ public class ManageFusionDialogListeners
 
 		long processingMB = 0;
 
-		if ( fusion.useContentBased )
+		if ( fusion.useContentBased > 0 )
 		{
 			if ( fusion.isMultiResolution() )
 				processingMB = ( maxNumPixelsInput / ( 1024*1024 ) ) * 4;

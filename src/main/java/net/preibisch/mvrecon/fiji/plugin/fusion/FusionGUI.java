@@ -88,7 +88,9 @@ public class FusionGUI implements FusionExportInterface
 	public static int defaultSplittingType = 0;
 
 	public static boolean defaultUseBlending = true;
-	public static boolean defaultUseContentBased = false;
+	public static int defaultUseContentBased = 0;
+	public static String[] contentbasedTypes = new String[]{ "Disabled", "1X weight images", "2X downsampled weight images", "4X downsampled weight images" };
+	
 	public static boolean defaultAdjustIntensities = false;
 	public static boolean defaultPreserveAnisotropy = false;
 
@@ -103,7 +105,7 @@ public class FusionGUI implements FusionExportInterface
 	protected int splittingType = defaultSplittingType;
 	protected double downsampling = defaultDownsampling;
 	protected boolean useBlending = defaultUseBlending;
-	protected boolean useContentBased = defaultUseContentBased;
+	protected int useContentBased = defaultUseContentBased;
 	protected boolean adjustIntensities = defaultAdjustIntensities;
 	protected boolean preserveAnisotropy = defaultPreserveAnisotropy;
 	protected double avgAnisoF;
@@ -179,7 +181,7 @@ public class FusionGUI implements FusionExportInterface
 
 	public boolean useBlending() { return useBlending; }
 
-	public boolean useContentBased() { return useContentBased; }
+	public int useContentBased() { return useContentBased; }
 
 	public boolean adjustIntensities() { return adjustIntensities; }
 
@@ -195,10 +197,10 @@ public class FusionGUI implements FusionExportInterface
 	public boolean queryDetails()
 	{
 		final boolean enableNonRigid = NonRigidParametersGUI.enableNonRigid;
-		final Choice boundingBoxChoice, pixelTypeChoice, cachingChoice, nonrigidChoice, splitChoice;
+		final Choice boundingBoxChoice, pixelTypeChoice, cachingChoice, nonrigidChoice, splitChoice, contentbasedCheckbox;
 		final TextField downsampleField;
 		TextField downsampleZField = null;
-		final Checkbox contentbasedCheckbox, anisoCheckbox;
+		final Checkbox anisoCheckbox;
 
 		final String[] choices = FusionGUI.getBoundingBoxChoices( allBoxes );
 		final String[] choicesForMacro = FusionGUI.getBoundingBoxChoices( allBoxes, false );
@@ -218,7 +220,7 @@ public class FusionGUI implements FusionExportInterface
 			gd.addChoice( "Bounding_Box", choicesForMacro, choicesForMacro[ defaultBB ] );
 		boundingBoxChoice = PluginHelper.isHeadless() ? null : (Choice)gd.getChoices().lastElement();
 
-		gd.addSlider( "Downsampling", 1.0, 16.0, defaultDownsampling );
+		gd.addSlider( "Downsampling", 1.0, 16.0, defaultDownsampling, 0.01 );
 		downsampleField = PluginHelper.isHeadless() ? null : (TextField)gd.getNumericFields().lastElement();
 
 		gd.addChoice( "Pixel_type", pixelTypes, pixelTypes[ defaultPixelType ] );
@@ -243,8 +245,10 @@ public class FusionGUI implements FusionExportInterface
 		}
 
 		gd.addCheckbox( "Blend images smoothly", defaultUseBlending );
-		gd.addCheckbox( "Use content based fusion (warning, huge memory requirements)", defaultUseContentBased );
-		contentbasedCheckbox = PluginHelper.isHeadless() ? null : (Checkbox)gd.getCheckboxes().lastElement();
+		//gd.addCheckbox( "Use content based fusion (warning, huge memory requirements)", defaultUseContentBased );
+		gd.addChoice( "Use content based fusion (huge memory requirements)", contentbasedTypes, contentbasedTypes[defaultUseContentBased] );
+		//contentbasedCheckbox = PluginHelper.isHeadless() ? null : (Checkbox)gd.getCheckboxes().lastElement();
+		contentbasedCheckbox = PluginHelper.isHeadless() ? null : (Choice)gd.getChoices().lastElement();
 
 		if ( hasIntensityAdjustments )
 			gd.addCheckbox( "Adjust_image_intensities (only use with 32-bit output)", defaultAdjustIntensities );
@@ -254,7 +258,7 @@ public class FusionGUI implements FusionExportInterface
 
 			gd.addCheckbox( "Preserve_original data anisotropy (shrink image below times in z) ", defaultPreserveAnisotropy );
 			anisoCheckbox = PluginHelper.isHeadless() ? null : (Checkbox)gd.getCheckboxes().lastElement();
-			gd.addSlider( "  Downsampling in Z", 1.0, 16.0, avgAnisoF, 0.0001 );
+			gd.addSlider( "  Anisotropy Z Downscaling", 1.0, 16.0, avgAnisoF, 0.0001 );
 			downsampleZField = PluginHelper.isHeadless() ? null : (TextField)gd.getNumericFields().lastElement();
 			
 			gd.addMessage(
@@ -332,7 +336,7 @@ public class FusionGUI implements FusionExportInterface
 		}
 
 		useBlending = defaultUseBlending = gd.getNextBoolean();
-		useContentBased = defaultUseContentBased = gd.getNextBoolean();
+		useContentBased = defaultUseContentBased = gd.getNextChoiceIndex();
 		if ( hasIntensityAdjustments )
 			adjustIntensities = defaultAdjustIntensities = gd.getNextBoolean();
 		else
@@ -368,7 +372,7 @@ public class FusionGUI implements FusionExportInterface
 		IOFunctions.println( "CacheType: " + FusionTools.imgDataTypeChoice[ getCacheType() ] );
 		IOFunctions.println( "Blending: " + useBlending );
 		IOFunctions.println( "Adjust intensities: " + adjustIntensities );
-		IOFunctions.println( "Content-based: " + useContentBased );
+		IOFunctions.println( "Content-based: " + contentbasedTypes[ useContentBased ] );
 		IOFunctions.println( "AnisotropyFactor: " + avgAnisoF );
 		IOFunctions.println( "Split by: " + splittingTypes[ getSplittingType() ] );
 		IOFunctions.println( "Image Export: " + imgExportDescriptions[ imgExport ] );

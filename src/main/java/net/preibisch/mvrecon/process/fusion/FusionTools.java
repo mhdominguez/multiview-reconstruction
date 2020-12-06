@@ -99,6 +99,7 @@ import net.preibisch.mvrecon.process.fusion.transformed.TransformWeight;
 import net.preibisch.mvrecon.process.fusion.transformed.weightcombination.CombineWeightsRandomAccessibleInterval;
 import net.preibisch.mvrecon.process.fusion.transformed.weightcombination.CombineWeightsRandomAccessibleInterval.CombineType;
 import net.preibisch.mvrecon.process.downsampling.DownsampleTools;
+import net.preibisch.mvrecon.process.downsampling.Downsample;
 import net.preibisch.mvrecon.process.interestpointregistration.TransformationTools;
 import net.preibisch.mvrecon.process.interestpointregistration.pairwise.constellation.grouping.Group;
 
@@ -260,12 +261,35 @@ public class FusionTools
 	{
 		return fuseVirtual( spimData, viewIds, true, false, 1, bb, downsampling, intensityAdjustments );
 	}
-
+	
+	//this is an overloaded placeholder to overcome type matching errors when fuseVirtual is called with bool useContentBased
 	public static Pair< RandomAccessibleInterval< FloatType >, AffineTransform3D > fuseVirtual(
 			final AbstractSpimData< ? > spimData,
 			final Collection< ? extends ViewId > views,
 			final boolean useBlending,
 			final boolean useContentBased,
+			final int interpolation,
+			final Interval boundingBox,
+			final double downsampling,
+			final Map< ? extends ViewId, AffineModel1D > intensityAdjustments )
+	{
+		return fuseVirtual( spimData,
+				   views,
+				   useBlending,
+				   (useContentBased ? 1 : 0),
+				   interpolation,
+				   boundingBox,
+				   downsampling,
+				   intensityAdjustments
+				  );
+		
+	}
+	//below method was modified with useContentBased to integer type
+	public static Pair< RandomAccessibleInterval< FloatType >, AffineTransform3D > fuseVirtual(
+			final AbstractSpimData< ? > spimData,
+			final Collection< ? extends ViewId > views,
+			final boolean useBlending,
+			final int useContentBased,
 			final int interpolation,
 			final Interval boundingBox,
 			final double downsampling,
@@ -329,7 +353,8 @@ public class FusionTools
 		bbDS.dimensions( dim );
 		return new FinalInterval( dim );
 	}
-
+	
+	//this is an overloaded placeholder to overcome type matching errors when fuseVirtual is called with bool useContentBased
 	public static Pair< RandomAccessibleInterval< FloatType >, AffineTransform3D > fuseVirtual(
 			final BasicImgLoader imgloader,
 			final Map< ViewId, AffineTransform3D > registrations,
@@ -337,6 +362,33 @@ public class FusionTools
 			final Collection< ? extends ViewId > views,
 			final boolean useBlending,
 			final boolean useContentBased,
+			final int interpolation,
+			final Interval boundingBox,
+			final double downsampling,
+			final Map< ? extends ViewId, AffineModel1D > intensityAdjustments )
+	{
+		return fuseVirtual(
+			imgloader,
+			registrations,
+			viewDescriptions,
+			views,
+			useBlending,
+			(useContentBased ? 1 : 0),
+			interpolation,
+			boundingBox,
+			downsampling,
+			intensityAdjustments			
+			);
+	}
+	
+	//below method was modified with useContentBased to integer type
+	public static Pair< RandomAccessibleInterval< FloatType >, AffineTransform3D > fuseVirtual(
+			final BasicImgLoader imgloader,
+			final Map< ViewId, AffineTransform3D > registrations,
+			final Map< ViewId, ? extends BasicViewDescription< ? > > viewDescriptions,
+			final Collection< ? extends ViewId > views,
+			final boolean useBlending,
+			final int useContentBased,
 			final int interpolation,
 			final Interval boundingBox,
 			final double downsampling,
@@ -387,6 +439,20 @@ public class FusionTools
 		final Pair< Interval, AffineTransform3D > scaledBB = createDownsampledBoundingBox( is_2d ? bBox2d : boundingBox, downsampling );
 		final Interval bb = scaledBB.getA();
 		final AffineTransform3D bbTransform = scaledBB.getB();
+		
+		//for downscaled weight images with content based fusion; declare the bounding box arrays but don't provide values unless they will be used
+		final double downsamplingContentBased;
+		if ( useContentBased > 0 )
+		{
+			if ( useContentBased > 2 ) //0=0, 1=1, 2=2, 3=4
+				downsamplingContentBased = 4.0;
+			else
+				downsamplingContentBased = Double.valueOf(useContentBased);
+		}
+		else
+		{
+			downsamplingContentBased = 1.0;
+		}
 
 		final ArrayList< RandomAccessibleInterval< FloatType > > images = new ArrayList<>();
 		final ArrayList< RandomAccessibleInterval< FloatType > > weights = new ArrayList<>();
@@ -415,7 +481,7 @@ public class FusionTools
 			images.add( TransformView.transformView( inputImg, model, bb, 0, interpolation ) );
 
 			// add all (or no) weighting schemes
-			if ( useBlending || useContentBased )
+			if ( useBlending || useContentBased > 0 )
 			{
 				RandomAccessibleInterval< FloatType > transformedBlending = null, transformedContentBased = null;
 
@@ -432,18 +498,43 @@ public class FusionTools
 				}
 	
 				// instantiate content based if necessary
-				if ( useContentBased )
+				if ( useContentBased > 0 )
 				{
 					final double[] sigma1 = Util.getArrayFromValue( defaultContentBasedSigma1, 3 );
 					final double[] sigma2 = Util.getArrayFromValue( defaultContentBasedSigma2, 3 );
+					if ( useContentBased > 1 )
+					{
+						//get the scale factors
+						final long[] scalefactors = new long[ 3 ];
+						for ( int d = 0; d < 3; ++d )
+							scalefactors[ d ] = Double.valueOf(downsamplingContentBased).longValue();
+						
+						//initialize new image construct, then downsample 
+						RandomAccessibleInterval inputImg_cb = Downsample.downsample( inputImg, scalefactors );
+					
+						//get new AffineTransform3D for adjusting convolution kernels
+						AffineTransform3D model_cb_down = model.copy();
+						TransformVirtual.scaleTransform( model_cb_down, 1.0 / downsamplingContentBased );
+						
+						// adjust both for z-scaling (anisotropy), downsampling, and registrations itself
+						adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, model_cb_down );
+						
+						//get new AffineTransform3D for re-up-scaling weight image
+						AffineTransform3D model_cb_up = model.copy();
+						TransformVirtual.scaleTransform( model_cb_up, downsamplingContentBased );
 
-					// adjust both for z-scaling (anisotropy), downsampling, and registrations itself
-					adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, model );
+						transformedContentBased = TransformWeight.transformContentBased( inputImg_cb, new CellImgFactory< ComplexFloatType >(), sigma1, sigma2, model_cb_up, bb );
+					}
+					else
+					{
+						// adjust both for z-scaling (anisotropy), downsampling, and registrations itself
+						adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, model );
 
-					transformedContentBased = TransformWeight.transformContentBased( inputImg, new CellImgFactory< ComplexFloatType >(), sigma1, sigma2, model, bb );
+						transformedContentBased = TransformWeight.transformContentBased( inputImg, new CellImgFactory< ComplexFloatType >(), sigma1, sigma2, model, bb );
+					}
 				}
 
-				if ( useContentBased && useBlending )
+				if ( useContentBased > 0 && useBlending )
 				{
 					weights.add( new CombineWeightsRandomAccessibleInterval(
 									new FinalInterval( transformedBlending ),
@@ -455,7 +546,7 @@ public class FusionTools
 				{
 					weights.add( transformedBlending );
 				}
-				else if ( useContentBased )
+				else if ( useContentBased > 0 )
 				{
 					weights.add( transformedContentBased );
 				}
