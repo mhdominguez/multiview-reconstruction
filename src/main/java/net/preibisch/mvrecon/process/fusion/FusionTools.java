@@ -102,6 +102,7 @@ import net.preibisch.mvrecon.process.downsampling.DownsampleTools;
 import net.preibisch.mvrecon.process.downsampling.Downsample;
 import net.preibisch.mvrecon.process.interestpointregistration.TransformationTools;
 import net.preibisch.mvrecon.process.interestpointregistration.pairwise.constellation.grouping.Group;
+import net.preibisch.mvrecon.Threads;
 
 public class FusionTools
 {
@@ -510,8 +511,10 @@ public class FusionTools
 							scalefactors[ d ] = Double.valueOf(downsamplingContentBased).longValue();
 						
 						//initialize new image construct, then downsample 
-						RandomAccessibleInterval inputImg_cb = Downsample.downsample( inputImg, scalefactors, (ExecutorService) null );
-					
+						final ExecutorService service = Threads.createFixedExecutorService( Threads.numThreads() );
+						RandomAccessibleInterval inputImg_cb = Downsample.downsample( inputImg, scalefactors, service );
+						service.shutdown();
+						
 						//get new AffineTransform3D for adjusting convolution kernels
 						AffineTransform3D model_cb_down = model.copy();
 						transformScale( model_cb_down, 1.0 / downsamplingContentBased );
