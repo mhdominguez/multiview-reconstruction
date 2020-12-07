@@ -518,11 +518,11 @@ public class FusionTools
 						
 						//get new AffineTransform3D for adjusting convolution kernels
 						
-						AffineTransform3D model_cb_down = model.copy();
-						transformScale( model_cb_down, 1.0 / downsamplingContentBased );
+						//AffineTransform3D model_cb_down = model.copy();
+						//transformScale( model_cb_down, 1.0 / downsamplingContentBased );
 						
 						// adjust both for z-scaling (anisotropy), downsampling, and registrations itself
-						adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, model_cb_down );
+						adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, model );
 						
 						//get new AffineTransform3D for re-up-scaling weight image
 						AffineTransform3D model_cb_up = model.copy();
@@ -530,7 +530,7 @@ public class FusionTools
 
 						transformedContentBased = TransformWeight.transformContentBased( inputImg_cb, new CellImgFactory< ComplexFloatType >(), sigma1, sigma2, model_cb_up, bb );
 						IOFunctions.println( "  model: " + TransformationTools.printAffine3D( model ) ); //Debug
-						IOFunctions.println( "  model_cb_down: " + TransformationTools.printAffine3D( model_cb_down ) ); //Debug
+						//IOFunctions.println( "  model_cb_down: " + TransformationTools.printAffine3D( model_cb_down ) ); //Debug
 						IOFunctions.println( "  model_cb_up: " + TransformationTools.printAffine3D( model_cb_up ) ); //Debug
 						DisplayImage.getImagePlusInstance( transformedContentBased, false, "Debug Content", (double) 0, (double) 65535 ).show(); //Debug
 					}
