@@ -510,7 +510,7 @@ public class FusionTools
 							scalefactors[ d ] = Double.valueOf(downsamplingContentBased).longValue();
 						
 						//initialize new image construct, then downsample 
-						RandomAccessibleInterval inputImg_cb = Downsample.downsample( inputImg, scalefactors );
+						RandomAccessibleInterval inputImg_cb = Downsample.downsample( inputImg, scalefactors, (ExecutorService) null );
 					
 						//get new AffineTransform3D for adjusting convolution kernels
 						AffineTransform3D model_cb_down = model.copy();
