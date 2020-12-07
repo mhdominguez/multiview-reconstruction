@@ -514,7 +514,7 @@ public class FusionTools
 					
 						//get new AffineTransform3D for adjusting convolution kernels
 						AffineTransform3D model_cb_down = model.copy();
-						TransformVirtual.scaleTransform( model_cb_down, 1.0 / downsamplingContentBased );
+						transformScale( model_cb_down, 1.0 / downsamplingContentBased );
 						
 						// adjust both for z-scaling (anisotropy), downsampling, and registrations itself
 						adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, model_cb_down );
@@ -562,6 +562,14 @@ public class FusionTools
 
 		return new ValuePair<>( new FusedRandomAccessibleInterval( new FinalInterval( getFusedZeroMinInterval( bb ) ), images, weights ), bbTransform );
 	}
+	
+	//similar to scaleTransform, but uses concatenate instead of preconcatenate, for scaling convolution kernel duing downsampled content based fusion
+	public static void transformScale( final AffineTransform3D t, final double factor )
+	{
+		final AffineTransform3D at = new AffineTransform3D();
+		at.scale( factor );
+		t.Concatenate( at );
+	}	
 
 	@SuppressWarnings("unchecked")
 	public static < T extends RealType< T > > RandomAccessibleInterval< FloatType > convertInput( final RandomAccessibleInterval< T > img )

@@ -246,7 +246,7 @@ public class FusionGUI implements FusionExportInterface
 
 		gd.addCheckbox( "Blend images smoothly", defaultUseBlending );
 		//gd.addCheckbox( "Use content based fusion (warning, huge memory requirements)", defaultUseContentBased );
-		gd.addChoice( "Use content based fusion (huge memory requirements)", contentbasedTypes, contentbasedTypes[defaultUseContentBased] );
+		gd.addChoice( "Use content based fusion", contentbasedTypes, contentbasedTypes[defaultUseContentBased] );
 		//contentbasedCheckbox = PluginHelper.isHeadless() ? null : (Checkbox)gd.getCheckboxes().lastElement();
 		contentbasedCheckbox = PluginHelper.isHeadless() ? null : (Choice)gd.getChoices().lastElement();
 
@@ -256,9 +256,9 @@ public class FusionGUI implements FusionExportInterface
 		if ( avgAnisoF > 1.01 ) // for numerical instabilities (computed upon instantiation)
 		{
 
-			gd.addCheckbox( "Preserve_original data anisotropy (shrink image below times in z) ", defaultPreserveAnisotropy );
+			gd.addCheckbox( "Preserve_original data anisotropy (shrink image in z)", defaultPreserveAnisotropy );
 			anisoCheckbox = PluginHelper.isHeadless() ? null : (Checkbox)gd.getCheckboxes().lastElement();
-			gd.addSlider( "  Anisotropy Z Downscaling", 1.0, 16.0, avgAnisoF, 0.0001 );
+			gd.addSlider( "  Anisotropy in z (Downscaling)", 1.0, 16.0, avgAnisoF, 0.0001 );
 			downsampleZField = PluginHelper.isHeadless() ? null : (TextField)gd.getNumericFields().lastElement();
 			
 			gd.addMessage(
