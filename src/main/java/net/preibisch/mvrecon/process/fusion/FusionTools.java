@@ -516,23 +516,18 @@ public class FusionTools
 						//DisplayImage.getImagePlusInstance( inputImg_cb, false, "Debug Downsample", (double) 0, (double) 255 ).show(); //Debug
 						service.shutdown();
 						
-						//get new AffineTransform3D for adjusting convolution kernels
-						
-						AffineTransform3D model_cb_down = model.copy();
-						transformScale( model_cb_down, downsamplingContentBased );
-						
-						// adjust both for z-scaling (anisotropy), downsampling, and registrations itself
-						adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, model_cb_down );
-						
-						//get new AffineTransform3D for re-up-scaling weight image
+						//get new AffineTransform3D for adjusting convolution kernels and re-up-scaling weight image
 						AffineTransform3D model_cb_up = model.copy();
 						transformScale( model_cb_up, downsamplingContentBased );
+						
+						// adjust both for z-scaling (anisotropy), downsampling, and registrations itself
+						adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, model_cb_up );
 
 						transformedContentBased = TransformWeight.transformContentBased( inputImg_cb, new CellImgFactory< ComplexFloatType >(), sigma1, sigma2, model_cb_up, bb );
-						IOFunctions.println( "  model: " + TransformationTools.printAffine3D( model ) ); //Debug
+						//IOFunctions.println( "  model: " + TransformationTools.printAffine3D( model ) ); //Debug
 						//IOFunctions.println( "  model_cb_down: " + TransformationTools.printAffine3D( model_cb_down ) ); //Debug
-						IOFunctions.println( "  model_cb_up: " + TransformationTools.printAffine3D( model_cb_up ) ); //Debug
-						DisplayImage.getImagePlusInstance( transformedContentBased, false, "Debug Content", (double) 0, (double) 65535 ).show(); //Debug
+						//IOFunctions.println( "  model_cb_up: " + TransformationTools.printAffine3D( model_cb_up ) ); //Debug
+						//DisplayImage.getImagePlusInstance( transformedContentBased, false, "Debug Content", (double) 0, (double) 65535 ).show(); //Debug
 					}
 					else
 					{
@@ -541,8 +536,8 @@ public class FusionTools
 
 						transformedContentBased = TransformWeight.transformContentBased( inputImg, new CellImgFactory< ComplexFloatType >(), sigma1, sigma2, model, bb );
 						
-						IOFunctions.println( "  model: " + TransformationTools.printAffine3D( model ) ); // Debug
-						DisplayImage.getImagePlusInstance( transformedContentBased, false, "Debug Content", (double) 0, (double) 65535 ).show(); //Debug
+						//IOFunctions.println( "  model: " + TransformationTools.printAffine3D( model ) ); // Debug
+						//DisplayImage.getImagePlusInstance( transformedContentBased, false, "Debug Content", (double) 0, (double) 65535 ).show(); //Debug
 					}
 				}
 
