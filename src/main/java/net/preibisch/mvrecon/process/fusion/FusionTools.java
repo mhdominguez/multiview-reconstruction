@@ -568,7 +568,7 @@ public class FusionTools
 	{
 		final AffineTransform3D at = new AffineTransform3D();
 		at.scale( factor );
-		t.Concatenate( at );
+		t.concatenate( at );
 	}	
 
 	@SuppressWarnings("unchecked")
