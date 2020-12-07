@@ -114,7 +114,7 @@ public class ManageFusionDialogListeners
 	public void update()
 	{
 		fusion.boundingBox = boundingBoxChoice.getSelectedIndex();
-		fusion.downsampling = Integer.parseInt( downsampleField.getText() );
+		fusion.downsampling = Double.valueOf( downsampleField.getText() );
 		fusion.pixelType = pixelTypeChoice.getSelectedIndex();
 		fusion.cacheType = cachingChoice.getSelectedIndex();
 		fusion.useContentBased = contentbasedCheckbox.getSelectedIndex();
