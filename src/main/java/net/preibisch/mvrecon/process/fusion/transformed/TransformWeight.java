@@ -38,8 +38,6 @@ import net.preibisch.mvrecon.process.fusion.transformed.weights.ContentBasedReal
 import net.preibisch.mvrecon.process.fusion.transformed.weights.TransformedRasteredRandomAccessible;
 import util.RealViews;
 
-import net.preibisch.mvrecon.process.export.DisplayImage; //Debug
-
 public class TransformWeight
 {
 	public static < T extends RealType< T > > RandomAccessibleInterval< FloatType > transformContentBased(
@@ -61,12 +59,7 @@ public class TransformWeight
 		}
 		else
 		{
-			//return transformWeight( new ContentBasedRealRandomAccessible< T >( inputImg, imgFactory, sigma1, sigma2 ), transform, boundingBox );
-			
-			//Debug below this.  Above line was original
-			final ContentBasedRealRandomAccessible< T > content = new ContentBasedRealRandomAccessible< T >( inputImg, imgFactory, sigma1, sigma2 );
-			DisplayImage.getImagePlusInstance( content, false, "Debug Content", (double) 0, (double) 65535 ).show(); //Debug
-			return transformWeight( content, transform, boundingBox );
+			return transformWeight( new ContentBasedRealRandomAccessible< T >( inputImg, imgFactory, sigma1, sigma2 ), transform, boundingBox );
 		}
 	}
 

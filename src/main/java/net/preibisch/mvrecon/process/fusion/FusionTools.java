@@ -528,6 +528,7 @@ public class FusionTools
 						TransformVirtual.scaleTransform( model_cb_up, downsamplingContentBased );
 
 						transformedContentBased = TransformWeight.transformContentBased( inputImg_cb, new CellImgFactory< ComplexFloatType >(), sigma1, sigma2, model_cb_up, bb );
+						DisplayImage.getImagePlusInstance( transformedContentBased, false, "Debug Content", (double) 0, (double) 65535 ).show(); //Debug
 					}
 					else
 					{
