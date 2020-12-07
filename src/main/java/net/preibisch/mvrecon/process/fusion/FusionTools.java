@@ -536,6 +536,7 @@ public class FusionTools
 						adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, model );
 
 						transformedContentBased = TransformWeight.transformContentBased( inputImg, new CellImgFactory< ComplexFloatType >(), sigma1, sigma2, model, bb );
+						DisplayImage.getImagePlusInstance( transformedContentBased, false, "Debug Content", (double) 0, (double) 65535 ).show(); //Debug
 					}
 				}
 
