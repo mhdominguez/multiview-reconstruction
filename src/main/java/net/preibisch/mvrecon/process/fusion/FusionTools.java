@@ -517,6 +517,7 @@ public class FusionTools
 						service.shutdown();
 						
 						//get new AffineTransform3D for adjusting convolution kernels
+						
 						AffineTransform3D model_cb_down = model.copy();
 						transformScale( model_cb_down, 1.0 / downsamplingContentBased );
 						
@@ -528,6 +529,9 @@ public class FusionTools
 						TransformVirtual.scaleTransform( model_cb_up, downsamplingContentBased );
 
 						transformedContentBased = TransformWeight.transformContentBased( inputImg_cb, new CellImgFactory< ComplexFloatType >(), sigma1, sigma2, model_cb_up, bb );
+						System.out.println( "  model: " + TransformationTools.printAffine3D( model ) ); //Debug
+						System.out.println( "  model_cb_down: " + TransformationTools.printAffine3D( model_cb_down ) ); //Debug
+						System.out.println( "  model_cb_up: " + TransformationTools.printAffine3D( model_cb_up ) ); //Debug
 						DisplayImage.getImagePlusInstance( transformedContentBased, false, "Debug Content", (double) 0, (double) 65535 ).show(); //Debug
 					}
 					else
@@ -536,6 +540,8 @@ public class FusionTools
 						adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, model );
 
 						transformedContentBased = TransformWeight.transformContentBased( inputImg, new CellImgFactory< ComplexFloatType >(), sigma1, sigma2, model, bb );
+						
+						System.out.println( "  model: " + TransformationTools.printAffine3D( model ) ); // Debug
 						DisplayImage.getImagePlusInstance( transformedContentBased, false, "Debug Content", (double) 0, (double) 65535 ).show(); //Debug
 					}
 				}
