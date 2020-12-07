@@ -513,6 +513,9 @@ public class FusionTools
 						//initialize new image construct, then downsample 
 						final ExecutorService service = Threads.createFixedExecutorService( Threads.numThreads() );
 						RandomAccessibleInterval inputImg_cb = Downsample.downsample( inputImg, scalefactors, service );
+						
+						DisplayImage.getImagePlusInstance( inputImg_cb, false, "Debug Downsample", (double) 0, (double) 255 ).show(); //Debug
+						
 						service.shutdown();
 						
 						//get new AffineTransform3D for adjusting convolution kernels
