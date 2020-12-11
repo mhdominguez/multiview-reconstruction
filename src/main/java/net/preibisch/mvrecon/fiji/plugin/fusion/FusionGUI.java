@@ -349,7 +349,6 @@ public class FusionGUI implements FusionExportInterface
 		if ( !preserveAnisotropy )
 		{
 			avgAnisoF = Double.NaN;
-			gd.getNextNumber();
 		}
 		else
 		{
