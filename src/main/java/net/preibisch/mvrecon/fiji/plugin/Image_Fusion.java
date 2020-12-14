@@ -104,7 +104,7 @@ public class Image_Fusion implements PlugIn
 		final double anisoF;
 		if ( !(Double.isNaN( fusion.getAnisotropyFactor() )) || fusion.getRotationType() > 0 ) // flatten the fused image or rotate bounding box and all views
 		{
-			if ( !Double.isNaN( fusion.getAnisotropyFactor() ) )
+			if ( Double.isNaN( fusion.getAnisotropyFactor() ) )
 				anisoF = 1.0;
 			else
 				anisoF = fusion.getAnisotropyFactor();
