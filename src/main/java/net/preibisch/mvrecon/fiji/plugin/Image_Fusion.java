@@ -100,10 +100,14 @@ public class Image_Fusion implements PlugIn
 
 		final List< Group< ViewDescription > > groups = fusion.getFusionGroups();
 		int i = 0;
-
-		if ( !Double.isNaN( fusion.getAnisotropyFactor() ) ) // flatten the fused image
+		
+		final double anisoF;
+		if ( !(Double.isNaN( fusion.getAnisotropyFactor() )) || fusion.getRotationType() > 0 ) // flatten the fused image or rotate bounding box and all views
 		{
-			final double anisoF = fusion.getAnisotropyFactor();
+			if ( !Double.isNaN( fusion.getAnisotropyFactor() )
+				anisoF = 1.0;
+			else
+				anisoF = fusion.getAnisotropyFactor();
 
 			Interval bb = fusion.getBoundingBox();
 			final long[] min = new long[ 3 ];
@@ -111,6 +115,28 @@ public class Image_Fusion implements PlugIn
 
 			bb.min( min );
 			bb.max( max );
+			
+			//handle orthogonal view fusion requests, note view transformations handled below
+			if (fusion.getRotationType() == 1) // X-Z swap
+			{
+				final long[] temp_minmax = new long[ 2 ]; // store temporary values here
+				temp_minmax[ 0 ] = min[ 0 ];
+				temp_minmax[ 1 ] = max[ 0 ];
+				min[ 0 ] = -max[ 2 ];
+				max[ 0 ] = -min[ 2 ];
+				min[ 2 ] = temp_minmax[ 0 ];
+				max[ 2 ] = temp_minmax[ 1 ];
+			}
+			else if (fusion.getRotationType() == 2) // Y-Z swap
+			{
+				final long[] temp_minmax = new long[ 2 ]; // store temporary values here
+				temp_minmax[ 0 ] = min[ 1 ];
+				temp_minmax[ 1 ] = max[ 1 ];
+				min[ 1 ] = -min[ 2 ]
+				max[ 1 ] = -min[ 2 ];
+				min[ 2 ] = temp_minmax[ 0 ];
+				max[ 2 ] = temp_minmax[ 1 ];	
+			}			
 
 			min[ 2 ] = Math.round( Math.floor( min[ 2 ] / anisoF ) );
 			max[ 2 ] = Math.round( Math.ceil( max[ 2 ] / anisoF ) );
@@ -119,6 +145,10 @@ public class Image_Fusion implements PlugIn
 
 			// we need to update the bounding box here
 			fusion.setBoundingBox( boundingBox );
+		}
+		else
+		{
+			anisoF = 1.0;
 		}
 
 		// query exporter parameters
@@ -164,7 +194,7 @@ public class Image_Fusion implements PlugIn
 
 			final RandomAccessibleInterval< FloatType > virtual;
 
-			if ( Double.isNaN( fusion.getAnisotropyFactor() ) ) // no flattening of the fused image
+			if ( Double.isNaN( fusion.getAnisotropyFactor() ) && fusion.getRotationType() == 0 ) // no flattening of the fused image, no rotation of bb and views
 			{
 				if ( fusion.getNonRigidParameters().isActive() )
 				{
@@ -210,11 +240,26 @@ public class Image_Fusion implements PlugIn
 					final ViewRegistration vr = spimData.getViewRegistrations().getViewRegistration( viewId );
 					vr.updateModel();
 					final AffineTransform3D model = vr.getModel().copy();
+					
+					//handle orthogonal view fusion requests, note bounding box was modified above
+					if (fusion.getRotationType() == 1) // X-Z swap (left-right)
+					{
+						final AffineTransform3D rotate90 = new AffineTransform3D();
+						rotate90.set (0.0, 0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0);
+						model.preConcatenate( rotate90 );	
+					}
+					else if (fusion.getRotationType() == 2) // Y-Z swap (top-bottom)
+					{
+						final AffineTransform3D rotate90 = new AffineTransform3D();
+						rotate90.set (1.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+						model.preConcatenate( rotate90 );
+					}
+					
 					final AffineTransform3D aniso = new AffineTransform3D();
 					aniso.set(
 							1.0, 0.0, 0.0, 0.0,
 							0.0, 1.0, 0.0, 0.0,
-							0.0, 0.0, 1.0/fusion.getAnisotropyFactor(), 0.0 );
+							0.0, 0.0, 1.0/anisoF, 0.0 );
 					model.preConcatenate( aniso );
 					registrations.put( viewId, model );
 				}

@@ -89,7 +89,9 @@ public class FusionGUI implements FusionExportInterface
 
 	public static boolean defaultUseBlending = true;
 	public static int defaultUseContentBased = 0;
-	public static String[] contentbasedTypes = new String[]{ "Disabled", "1X weight images", "2X downsampled weight images", "4X downsampled weight images" };
+	public static String[] contentbasedTypes = new String[]{ "Disabled", "1X weight images (slowest, most precise)", "2X downsampled weights (faster, less precise)", "4X downsampled weights (fastest, least precise)" };
+	public static int defaultRotationType = 0;
+	public static String[] rotationTypes = new String[]{ "Current XYZ orientation (Default)", "Swap X and Z (fuse left-right)", "Swap Y and Z (fuse top-bottom)" };
 	
 	public static boolean defaultAdjustIntensities = false;
 	public static boolean defaultPreserveAnisotropy = false;
@@ -100,6 +102,7 @@ public class FusionGUI implements FusionExportInterface
 
 	protected int interpolation = defaultInterpolation;
 	protected int boundingBox = defaultBB;
+	protected int rotationType = defaultRotationType;
 	protected int pixelType = defaultPixelType;
 	protected int cacheType = defaultCache;
 	protected int splittingType = defaultSplittingType;
@@ -169,6 +172,8 @@ public class FusionGUI implements FusionExportInterface
 	}
 	public int getInterpolation() { return interpolation; }
 
+	public int getRotationType() { return rotationType; }
+	
 	@Override
 	public int getPixelType() { return pixelType; }
 
@@ -197,7 +202,7 @@ public class FusionGUI implements FusionExportInterface
 	public boolean queryDetails()
 	{
 		final boolean enableNonRigid = NonRigidParametersGUI.enableNonRigid;
-		final Choice boundingBoxChoice, pixelTypeChoice, cachingChoice, nonrigidChoice, splitChoice, contentbasedCheckbox;
+		final Choice boundingBoxChoice, pixelTypeChoice, cachingChoice, nonrigidChoice, splitChoice, contentbasedCheckbox, rotationChoice;
 		final TextField downsampleField;
 		TextField downsampleZField = null;
 		final Checkbox anisoCheckbox;
@@ -219,6 +224,9 @@ public class FusionGUI implements FusionExportInterface
 		else
 			gd.addChoice( "Bounding_Box", choicesForMacro, choicesForMacro[ defaultBB ] );
 		boundingBoxChoice = PluginHelper.isHeadless() ? null : (Choice)gd.getChoices().lastElement();
+
+		gd.addChoice( "Fuse orthogonal view", rotationTypes, contentbasedTypes[defaultRotationType] );
+		rotationChoice = PluginHelper.isHeadless() ? null : (Choice)gd.getChoices().lastElement();		
 
 		gd.addSlider( "Downsampling", 1.0, 16.0, defaultDownsampling, 0.01 );
 		downsampleField = PluginHelper.isHeadless() ? null : (TextField)gd.getNumericFields().lastElement();
@@ -320,6 +328,7 @@ public class FusionGUI implements FusionExportInterface
 		}
 
 		boundingBox = defaultBB = gd.getNextChoiceIndex();
+		rotationType = defaultRotationType = gd.getNextChoiceIndex();
 		downsampling = defaultDownsampling = gd.getNextNumber();
 
 		if ( downsampling == 1.0 )
