@@ -132,7 +132,7 @@ public class Image_Fusion implements PlugIn
 				final long[] temp_minmax = new long[ 2 ]; // store temporary values here
 				temp_minmax[ 0 ] = min[ 1 ];
 				temp_minmax[ 1 ] = max[ 1 ];
-				min[ 1 ] = -min[ 2 ];
+				min[ 1 ] = -max[ 2 ];
 				max[ 1 ] = -min[ 2 ];
 				min[ 2 ] = temp_minmax[ 0 ];
 				max[ 2 ] = temp_minmax[ 1 ];	
