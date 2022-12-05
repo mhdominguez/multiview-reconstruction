@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2021 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -21,28 +21,31 @@
  * #L%
  */
 
-package net.preibisch.mvrecon.process.interestpointdetection.methods.weightedgauss;
+package net.preibisch.mvrecon.process.interestpointdetection.methods.lazygauss;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.io.File;
 import java.util.function.Consumer;
 
+import bdv.util.ConstantRandomAccessible;
+import ij.ImageJ;
 import net.imglib2.Cursor;
+import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
-import net.imglib2.Localizable;
-import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.Sampler;
 import net.imglib2.algorithm.gauss3.Gauss3;
-import net.imglib2.algorithm.gauss3.SeparableSymmetricConvolution;
 import net.imglib2.converter.Converters;
 import net.imglib2.exception.IncompatibleTypeException;
 import net.imglib2.img.array.ArrayImgFactory;
+import net.imglib2.img.basictypeaccess.AccessFlags;
+import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.util.Util;
+import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Intervals;
 import net.imglib2.view.Views;
+import net.preibisch.legacy.io.IOFunctions;
+import net.preibisch.mvrecon.process.interestpointdetection.methods.dog.DoGImgLib2;
 
 /**
  * Simple Gaussian filter Op
@@ -51,19 +54,20 @@ import net.imglib2.view.Views;
  * @author Stephan Preibisch
  * @param <T> type of input and output
  */
-public class WeightedGaussRA<T extends RealType<T> & NativeType<T>> implements Consumer<RandomAccessibleInterval<T>>
+public class LazyWeightedGauss<T extends RealType<T> & NativeType<T>> implements Consumer<RandomAccessibleInterval<T>>
 {
 	final T type;
 	final private double[] sigmas;
 	final long[] globalMin;
 	final private RandomAccessible<T> source, weight, weightedSource;
 
-	public Interval total;
+	public Interval processingInterval;
 
-	public WeightedGaussRA(
+	public LazyWeightedGauss(
 			final long[] min,
 			final RandomAccessible<T> source,
 			final RandomAccessible<T> weight,
+			final Interval processingInterval,
 			final T type,
 			final double[] sigmas)
 	{
@@ -149,5 +153,54 @@ public class WeightedGaussRA<T extends RealType<T> & NativeType<T>> implements C
 		{
 			throw new RuntimeException(e);
 		}
+	}
+
+	public static final <T extends RealType<T> & NativeType<T>> RandomAccessibleInterval<T> init(
+			final RandomAccessible< T > input,
+			final RandomAccessible< T > mask,
+			final Interval processingInterval,
+			final T type,
+			final double[] sigma,
+			final int[] blockSize )
+	{
+		final long[] min = processingInterval.minAsLongArray();
+
+		final LazyWeightedGauss< T > weightedgauss =
+				new LazyWeightedGauss<>(
+						min,
+						input,//Views.extendMirrorSingle( input ),
+						mask,//Views.extendZero( mask ),
+						processingInterval,
+						type.createVariable(),
+						sigma );
+
+		final RandomAccessibleInterval<T> gauss = Views.translate( Lazy.process( processingInterval, blockSize, type.createVariable(), AccessFlags.setOf(), weightedgauss ), min );
+
+		return gauss;
+	}
+
+	public static void main( String[] args )
+	{
+		new ImageJ();
+
+		final RandomAccessibleInterval< FloatType > raw =
+				IOFunctions.openAs32BitArrayImg( new File( "/Users/preibischs/Documents/Microscopy/SPIM/HisYFP-SPIM/spim_TL18_Angle0.tif"));
+
+		final RandomAccessibleInterval< FloatType > inputCropped = Views.interval( raw, Intervals.expand(raw, new long[] {-200, -200, -20}) );
+
+		final RandomAccessibleInterval< FloatType > mask =
+				Views.interval(new ConstantRandomAccessible< FloatType >( new FloatType( 1 ), inputCropped.numDimensions() ), inputCropped );
+
+		ImageJFunctions.show( inputCropped );
+
+		RandomAccessibleInterval<FloatType> gauss = LazyWeightedGauss.init(
+				Views.extendMirrorSingle( inputCropped ),
+				Views.extendZero( mask ),
+				new FinalInterval(inputCropped),
+				new FloatType(),
+				new double[] { 2.0, 2.0, 2.0},
+				DoGImgLib2.blockSize );
+
+		ImageJFunctions.show( gauss );
 	}
 }

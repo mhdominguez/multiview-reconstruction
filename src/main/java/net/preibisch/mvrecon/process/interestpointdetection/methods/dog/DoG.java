@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2021 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -34,13 +34,12 @@ import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.view.Views;
 import net.preibisch.legacy.io.IOFunctions;
 import net.preibisch.mvrecon.Threads;
 import net.preibisch.mvrecon.fiji.spimdata.interestpoints.InterestPoint;
-import net.preibisch.mvrecon.process.deconvolution.DeconViews;
 import net.preibisch.mvrecon.process.downsampling.DownsampleTools;
 import net.preibisch.mvrecon.process.interestpointdetection.InterestPointTools;
-import util.ImgLib1Convert;
 
 public class DoG
 {
@@ -73,7 +72,7 @@ public class DoG
 	 * @param findMax - fina intensity maxima
 	 * @param minIntensity - the min intensity for normalization to 0...1, if Double.NaN the value will be looked up
 	 * @param maxIntensity - the max intensity for normalization to 0...1, if Double.NaN the value will be looked up
-	 * @param numThreads - number of threads to use
+	 * @param service - the ExecutorService to use
 	 *
 	 * @return a list of interest points
 	 */
@@ -85,15 +84,13 @@ public class DoG
 			final boolean findMax,
 			final double minIntensity,
 			final double maxIntensity,
-			final int numThreads )
+			final ExecutorService service )
 	{
-		final ExecutorService service = Threads.createFixedExecutorService( numThreads );
-
 		//
 		// compute Difference-of-Gaussian (includes normalization)
 		//
 		List< InterestPoint > ips = DoGImgLib2.computeDoG(
-				input,
+				Views.zeroMin( input ),
 				null,
 				sigma,
 				threshold,
@@ -102,8 +99,7 @@ public class DoG
 				findMax,
 				minIntensity,
 				maxIntensity,
-				service,
-				numThreads );
+				service );
 
 		//if ( dog.limitDetections )
 		//	ips = InterestPointTools.limitList( dog.maxDetections, dog.maxDetectionsTypeIndex, ips );
@@ -144,49 +140,34 @@ public class DoG
 
 				final ExecutorService service = Threads.createFixedExecutorService( Threads.numThreads() );
 
+				// TODO: downsampling is not virtual!
 				@SuppressWarnings("unchecked")
-				final RandomAccessibleInterval< net.imglib2.type.numeric.real.FloatType > input =
+				final RandomAccessibleInterval< FloatType > input =
 						DownsampleTools.openAndDownsample(
 								dog.imgloader,
 								vd,
 								correctCoordinates,
 								new long[] { dog.downsampleXY, dog.downsampleXY, dog.downsampleZ },
 								false,  //transformOnly
-								false,   //openAsFloat
-								false, //openCompletely
-								service );
+								false   //openAsFloat 
+								);
 
-				List< InterestPoint > ips;
-
-				if ( dog.cuda == null )
-				{
-					ips = DoGImgLib2.computeDoG(input, null, dog.sigma, dog.threshold, dog.localization, dog.findMin, dog.findMax, dog.minIntensity,
-						dog.maxIntensity, service, Threads.numThreads() );
-				}
-				else
-				{
-					
-					final ImgLib1Convert convert = new ImgLib1Convert( input, service );
-	
-					//
-					// compute Difference-of-Gaussian (includes normalization)
-					//
-					ips = ProcessDOG.compute(
-							dog.cuda, dog.deviceList, dog.accurateCUDA, dog.percentGPUMem,
-							service,
-							Threads.numThreads(),
-							convert,
-							(float) dog.sigma, (float) dog.threshold,
+				List< InterestPoint > ips = DoGImgLib2.computeDoG(
+							input,
+							null, // mask
+							dog.sigma,
+							dog.threshold,
 							dog.localization,
-							Math.min( dog.imageSigmaX, (float) dog.sigma ),
-							Math.min( dog.imageSigmaY, (float) dog.sigma ),
-							Math.min( dog.imageSigmaZ, (float) dog.sigma ),
-							dog.findMin, dog.findMax, dog.minIntensity,
+							dog.findMin,
+							dog.findMax,
+							dog.minIntensity,
 							dog.maxIntensity,
-							dog.limitDetections );
-	
-					convert.imglib1Img().close();
-				}
+							DoGImgLib2.blockSize,
+							service,
+							dog.cuda,
+							dog.deviceCUDA,
+							dog.accurateCUDA,
+							dog.percentGPUMem );
 
 				service.shutdown();
 

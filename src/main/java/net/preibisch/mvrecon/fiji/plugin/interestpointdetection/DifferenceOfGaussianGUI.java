@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2021 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -23,11 +23,18 @@
 package net.preibisch.mvrecon.fiji.plugin.interestpointdetection;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
+import ij.ImagePlus;
+import ij.gui.GenericDialog;
+import mpicbg.spim.data.sequence.TimePoint;
+import mpicbg.spim.data.sequence.ViewDescription;
+import mpicbg.spim.data.sequence.ViewId;
 import net.preibisch.legacy.io.IOFunctions;
-import net.preibisch.legacy.segmentation.InteractiveDoG;
+import net.preibisch.mvrecon.fiji.plugin.interestpointdetection.interactive.InteractiveDoGParams;
+import net.preibisch.mvrecon.fiji.plugin.interestpointdetection.interactive.InteractiveDoG;
 import net.preibisch.mvrecon.fiji.plugin.util.GenericDialogAppender;
 import net.preibisch.mvrecon.fiji.spimdata.SpimData2;
 import net.preibisch.mvrecon.fiji.spimdata.interestpoints.InterestPoint;
@@ -35,16 +42,10 @@ import net.preibisch.mvrecon.process.cuda.CUDADevice;
 import net.preibisch.mvrecon.process.cuda.CUDASeparableConvolution;
 import net.preibisch.mvrecon.process.cuda.CUDATools;
 import net.preibisch.mvrecon.process.cuda.NativeLibraryTools;
+import net.preibisch.mvrecon.process.downsampling.DownsampleTools;
 import net.preibisch.mvrecon.process.interestpointdetection.methods.dog.DoG;
 import net.preibisch.mvrecon.process.interestpointdetection.methods.dog.DoGParameters;
-import net.preibisch.mvrecon.process.downsampling.DownsampleTools;
 import net.preibisch.mvrecon.process.interestpointregistration.pairwise.constellation.grouping.Group;
-
-import ij.ImagePlus;
-import ij.gui.GenericDialog;
-import mpicbg.spim.data.sequence.TimePoint;
-import mpicbg.spim.data.sequence.ViewDescription;
-import mpicbg.spim.data.sequence.ViewId;
 
 public class DifferenceOfGaussianGUI extends DifferenceOfGUI implements GenericDialogAppender
 {
@@ -69,9 +70,9 @@ public class DifferenceOfGaussianGUI extends DifferenceOfGUI implements GenericD
 	double percentGPUMem = defaultUseGPUMem;
 
 	/**
-	 * 0 ... n == CUDA device i
+	 * CUDA device
 	 */
-	ArrayList< CUDADevice > deviceList = null;
+	CUDADevice deviceCUDA = null;
 	CUDASeparableConvolution cuda = null;
 	boolean accurateCUDA = false;
 
@@ -112,7 +113,7 @@ public class DifferenceOfGaussianGUI extends DifferenceOfGUI implements GenericD
 		dog.findMax = this.findMax;
 
 		dog.cuda = this.cuda;
-		dog.deviceList = this.deviceList;
+		dog.deviceCUDA = this.deviceCUDA;
 		dog.accurateCUDA = this.accurateCUDA;
 		dog.percentGPUMem = this.percentGPUMem;
 
@@ -215,36 +216,46 @@ public class DifferenceOfGaussianGUI extends DifferenceOfGUI implements GenericD
 		imp.setSlice( imp.getStackSize() / 2 );
 		imp.setRoi( 0, 0, imp.getWidth()/3, imp.getHeight()/3 );
 
-		final InteractiveDoG idog = new InteractiveDoG( imp );
+		InteractiveDoGParams params = new InteractiveDoGParams();
+		params.sigma = (float)defaultSigma;
+		params.threshold = (float)defaultThreshold;
+		params.findMaxima = defaultFindMax;
+		params.findMinima = defaultFindMin;
 
-		idog.setSigma2isAdjustable( false );
-		idog.setInitialSigma( (float)defaultSigma );
-		idog.setThreshold( (float)defaultThreshold );
-		idog.setLookForMinima( defaultFindMin );
-		idog.setLookForMaxima( defaultFindMax );
-		idog.setMinIntensityImage( minIntensity ); // if is Double.NaN will be ignored
-		idog.setMaxIntensityImage( maxIntensity ); // if is Double.NaN will be ignored
+		final double min, max;
 
-		idog.run( null );
+		if ( Double.isNaN( minIntensity ) || Double.isNaN( maxIntensity ) )
+		{
+			min = imp.getDisplayRangeMin();
+			max = imp.getDisplayRangeMax();
 
-		while ( !idog.isFinished() )
+			IOFunctions.println( "(" + new Date(System.currentTimeMillis() ) + "): Using approximate min [" + min + "]/max[" + max + "] intensity values ... to have a more accurate preview your can manually set min/max intensity." );
+		}
+		else
+		{
+			min = minIntensity;
+			max = maxIntensity;
+		}
+
+		final InteractiveDoG idog = new InteractiveDoG( imp, params, min, max );
+		do
 		{
 			try
 			{
 				Thread.sleep( 100 );
-			}
-			catch (InterruptedException e) {}
+			} catch (InterruptedException e) {}
 		}
+		while (!idog.isFinished());
 
 		imp.close();
 
-		if ( idog.wasCanceled() )
+		if (idog.wasCanceled())
 			return false;
 
-		this.sigma = defaultSigma = idog.getInitialSigma();
-		this.threshold = defaultThreshold = idog.getThreshold();
-		this.findMin = defaultFindMin = idog.getLookForMinima();
-		this.findMax = defaultFindMax = idog.getLookForMaxima();
+		this.sigma = defaultSigma = params.sigma; //idog.getInitialSigma();
+		this.threshold = defaultThreshold = params.threshold; //idog.getThreshold();
+		this.findMax = defaultFindMax = params.findMaxima;//idog.getLookForMaxima();
+		this.findMin = defaultFindMin = params.findMinima;//idog.getLookForMinima();
 
 		return true;
 	}
@@ -284,12 +295,8 @@ public class DifferenceOfGaussianGUI extends DifferenceOfGUI implements GenericD
 			if ( cuda == null )
 			{
 				IOFunctions.println( "Cannot load CUDA JNA library." );
-				deviceList = null;
+				deviceCUDA = null;
 				return false;
-			}
-			else
-			{
-				deviceList = new ArrayList< CUDADevice >();
 			}
 
 			// multiple CUDA devices sometimes crashes, no idea why yet ...
@@ -298,22 +305,11 @@ public class DifferenceOfGaussianGUI extends DifferenceOfGUI implements GenericD
 			if ( selectedDevices == null || selectedDevices.size() == 0 )
 				return false;
 			else
-				deviceList.addAll( selectedDevices );
-
-			// TODO: remove this, only for debug on non-CUDA machines >>>>
-			if ( deviceList.get( 0 ).getDeviceName().startsWith( "CPU emulation" ) )
-			{
-				for ( int i = 0; i < deviceList.size(); ++i )
-				{
-					deviceList.set( i, new CUDADevice( -1-i, deviceList.get( i ).getDeviceName(), deviceList.get( i ).getTotalDeviceMemory(), deviceList.get( i ).getFreeDeviceMemory(), deviceList.get( i ).getMajorComputeVersion(), deviceList.get( i ).getMinorComputeVersion() ) );
-					IOFunctions.println( "Running on cpu emulation, added " + ( -1-i ) + " as device" );
-				}
-			}
-			// TODO: <<<< remove this, only for debug on non-CUDA machines
+				deviceCUDA = selectedDevices.get( 0 );
 		}
 		else
 		{
-			deviceList = null;
+			deviceCUDA = null;
 		}
 
 		return true;

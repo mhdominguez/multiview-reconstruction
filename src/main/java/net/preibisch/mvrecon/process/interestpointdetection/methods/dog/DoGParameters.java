@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2021 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -22,15 +22,13 @@
  */
 package net.preibisch.mvrecon.process.interestpointdetection.methods.dog;
 
-import java.util.ArrayList;
 import java.util.Collection;
-
-import net.preibisch.mvrecon.process.cuda.CUDADevice;
-import net.preibisch.mvrecon.process.cuda.CUDASeparableConvolution;
-import net.preibisch.mvrecon.process.interestpointdetection.methods.InterestPointParameters;
 
 import mpicbg.spim.data.sequence.ImgLoader;
 import mpicbg.spim.data.sequence.ViewDescription;
+import net.preibisch.mvrecon.process.cuda.CUDADevice;
+import net.preibisch.mvrecon.process.cuda.CUDASeparableConvolution;
+import net.preibisch.mvrecon.process.interestpointdetection.methods.InterestPointParameters;
 
 public class DoGParameters extends InterestPointParameters
 {
@@ -46,7 +44,7 @@ public class DoGParameters extends InterestPointParameters
 	public boolean findMax = true;
 
 	public double percentGPUMem = 75;
-	public ArrayList< CUDADevice > deviceList = null;
+	public CUDADevice deviceCUDA = null;
 	public CUDASeparableConvolution cuda = null;
 	public boolean accurateCUDA = false;
 

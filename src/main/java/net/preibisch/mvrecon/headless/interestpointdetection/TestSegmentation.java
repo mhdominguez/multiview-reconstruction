@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2021 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -36,8 +36,6 @@ import net.preibisch.mvrecon.fiji.spimdata.interestpoints.InterestPoint;
 import net.preibisch.mvrecon.process.interestpointdetection.InterestPointTools;
 import net.preibisch.mvrecon.process.interestpointdetection.methods.dog.DoG;
 import net.preibisch.mvrecon.process.interestpointdetection.methods.dog.DoGParameters;
-import net.preibisch.mvrecon.process.interestpointdetection.methods.dom.DoM;
-import net.preibisch.mvrecon.process.interestpointdetection.methods.dom.DoMParameters;
 import net.preibisch.simulation.imgloader.SimulatedBeadsImgLoader;
 
 public class TestSegmentation
@@ -69,26 +67,6 @@ public class TestSegmentation
 		final HashMap< ViewId, List< InterestPoint > > points = DoG.findInterestPoints( dog );
 
 		InterestPointTools.addInterestPoints( spimData, "beads", points, "DoG, sigma=1.4, downsample=2" );
-	}
-
-	public static void testDoM( final SpimData2 spimData )
-	{
-		DoMParameters dom = new DoMParameters();
-		
-		dom.imgloader = spimData.getSequenceDescription().getImgLoader();
-		dom.toProcess = new ArrayList< ViewDescription >();
-		dom.toProcess.addAll( spimData.getSequenceDescription().getViewDescriptions().values() );
-
-		// filter not present ViewIds
-		final List< ViewDescription > removed = SpimData2.filterMissingViews( spimData, dom.toProcess );
-		IOFunctions.println( new Date( System.currentTimeMillis() ) + ": Removed " +  removed.size() + " views because they are not present." );
-
-		dom.downsampleXY = 2;
-		dom.radius1 = 2;
-		
-		final HashMap< ViewId, List< InterestPoint > > points = DoM.findInterestPoints( dom );
-		
-		InterestPointTools.addInterestPoints( spimData, "beads", points, "DoM, sigma=2, downsample=2" );
 	}
 
 	public static void main( String[] args ) throws SpimDataException

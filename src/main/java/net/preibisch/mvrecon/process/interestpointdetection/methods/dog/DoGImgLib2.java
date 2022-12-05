@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2021 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -36,10 +36,8 @@ import java.util.concurrent.Future;
 
 import bdv.util.ConstantRandomAccessible;
 import ij.ImageJ;
-import mpicbg.imglib.algorithm.scalespace.DifferenceOfGaussian.SpecialPoint;
-import mpicbg.imglib.image.Image;
-import mpicbg.imglib.wrapper.ImgLib2;
 import net.imglib2.Cursor;
+import net.imglib2.Dimensions;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.IterableInterval;
@@ -52,8 +50,11 @@ import net.imglib2.algorithm.neighborhood.RectangleShape;
 import net.imglib2.converter.BiConverter;
 import net.imglib2.converter.Converters;
 import net.imglib2.img.Img;
+import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgFactory;
+import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.img.basictypeaccess.AccessFlags;
+import net.imglib2.img.basictypeaccess.array.FloatArray;
 import net.imglib2.img.cell.CellImgFactory;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.type.NativeType;
@@ -66,27 +67,42 @@ import net.imglib2.view.Views;
 import net.preibisch.legacy.io.IOFunctions;
 import net.preibisch.legacy.registration.bead.laplace.LaPlaceFunctions;
 import net.preibisch.legacy.segmentation.SimplePeak;
-import net.preibisch.mvrecon.Threads;
 import net.preibisch.mvrecon.fiji.spimdata.interestpoints.InterestPoint;
-import net.preibisch.mvrecon.process.deconvolution.DeconViews;
+import net.preibisch.mvrecon.process.cuda.Block;
+import net.preibisch.mvrecon.process.cuda.BlockGenerator;
+import net.preibisch.mvrecon.process.cuda.BlockGeneratorVariableSizePrecise;
+import net.preibisch.mvrecon.process.cuda.BlockGeneratorVariableSizeSimple;
+import net.preibisch.mvrecon.process.cuda.CUDADevice;
+import net.preibisch.mvrecon.process.cuda.CUDASeparableConvolution;
+import net.preibisch.mvrecon.process.cuda.CUDASeparableConvolutionFunctions;
+import net.preibisch.mvrecon.process.cuda.CUDASeparableConvolutionFunctions.OutOfBounds;
 import net.preibisch.mvrecon.process.fusion.FusionTools;
 import net.preibisch.mvrecon.process.fusion.ImagePortion;
 import net.preibisch.mvrecon.process.interestpointdetection.Localization;
-import net.preibisch.mvrecon.process.interestpointdetection.methods.weightedgauss.Lazy;
-import net.preibisch.mvrecon.process.interestpointdetection.methods.weightedgauss.WeightedGaussRA;
+import net.preibisch.mvrecon.process.interestpointdetection.methods.lazygauss.Lazy;
+import net.preibisch.mvrecon.process.interestpointdetection.methods.lazygauss.LazyGauss;
+import net.preibisch.mvrecon.process.interestpointdetection.methods.lazygauss.LazyWeightedGauss;
 import util.ImgLib2Tools;
 
 public class DoGImgLib2
 {
 	public static boolean silent = false;
-	private static int[] blockSize = new int[] {96, 96, 64};
+	public static int[] blockSize = new int[] {96, 96, 64};
+	public static enum SpecialPoint { INVALID, MIN, MAX };
 
 	public static void main ( String[] args )
 	{
 		new ImageJ();
 
-		final RandomAccessibleInterval< FloatType > input = IOFunctions.openAs32BitArrayImg( new File( "/groups/scicompsoft/home/preibischs/Documents/SPIM/spim_TL18_Angle0.tif"))  ;
-		final RandomAccessibleInterval< FloatType > mask = Views.interval(new ConstantRandomAccessible< FloatType >( new FloatType( 1 ), input.numDimensions() ), input );
+		final RandomAccessibleInterval< FloatType > input =
+				IOFunctions.openAs32BitArrayImg( new File( "/Users/preibischs/Documents/Microscopy/SPIM/HisYFP-SPIM/spim_TL18_Angle0.tif"));
+
+		final RandomAccessibleInterval< FloatType > inputCropped = Views.interval( input, Intervals.expand(input, new long[] {-200, -200, -20}) );
+
+		ImageJFunctions.show( inputCropped );
+
+		final RandomAccessibleInterval< FloatType > mask =
+				Views.interval(new ConstantRandomAccessible< FloatType >( new FloatType( 1 ), input.numDimensions() ), input );
 
 		//computeDoG(input, mask, 1.8015, 0.007973356, 1/*localization*/, false /*findMin*/, true /*findMax*/, Double.NaN, Double.NaN, DeconViews.createExecutorService(), Threads.numThreads() );
 
@@ -96,7 +112,7 @@ public class DoGImgLib2
 
 		// 1388x1040x81 = 116925120
 		final ArrayList<InterestPoint> points = 
-				computeDoG(input, mask, 2.000, 0.03, 1/*localization*/, false /*findMin*/, true /*findMax*/, 0, 255, Executors.newFixedThreadPool( 1 ), 1 );
+				computeDoG(inputCropped, null, 2.000, 0.03, 1/*localization*/, false /*findMin*/, true /*findMax*/, 0, 255, Executors.newFixedThreadPool( 8 ) );
 
 		System.out.println( System.currentTimeMillis() - time );
 
@@ -134,10 +150,9 @@ public class DoGImgLib2
 			final boolean findMax,
 			final double minIntensity,
 			final double maxIntensity,
-			final ExecutorService service,
-			final int numThreads ) // for old imglib1-code
+			final ExecutorService service )
 	{
-		return computeDoG(input, mask, sigma, threshold, localization, findMin, findMax, minIntensity, maxIntensity, blockSize, service, numThreads);
+		return computeDoG(input, mask, sigma, threshold, localization, findMin, findMax, minIntensity, maxIntensity, blockSize, service, null, null, false, 0.0 );
 	}
 
 	public static < T extends RealType< T > > ArrayList< InterestPoint > computeDoG(
@@ -152,7 +167,10 @@ public class DoGImgLib2
 			final double maxIntensity,
 			final int[] blockSize,
 			final ExecutorService service,
-			final int numThreads ) // for old imglib1-code
+			final CUDASeparableConvolution cuda,
+			final CUDADevice cudaDevice,
+			final boolean accurateCUDA,
+			final double percentGPUMem )
 	{
 		float initialSigma = (float)sigma;
 		
@@ -223,26 +241,24 @@ public class DoGImgLib2
 		{
 			maskFloat = null;
 
-			if ( Views.iterable( inputFloat ).size() < 2147483647 )
+			if ( cuda == null )
 			{
-				gauss1 = Views.translate( new ArrayImgFactory<>( new FloatType() ).create( inputFloat ), minInterval );
-				gauss2 = Views.translate( new ArrayImgFactory<>( new FloatType() ).create( inputFloat ), minInterval );
+				gauss1 = LazyGauss.init( Views.extendMirrorDouble( inputFloat ), new FinalInterval( inputFloat ), new FloatType(), sigma1, blockSize );
+				gauss2 = LazyGauss.init( Views.extendMirrorDouble( inputFloat ), new FinalInterval( inputFloat ), new FloatType(), sigma2, blockSize );
 			}
 			else
 			{
-				gauss1 = Views.translate( new CellImgFactory<>( new FloatType() ).create( inputFloat ), minInterval );
-				gauss2 = Views.translate( new CellImgFactory<>( new FloatType() ).create( inputFloat ), minInterval );
+				// TODO: untested
+				gauss1 = computeGaussCUDA( inputFloat, sigma1, cuda, cudaDevice, accurateCUDA, percentGPUMem );
+				gauss2 = computeGaussCUDA( inputFloat, sigma2, cuda, cudaDevice, accurateCUDA, percentGPUMem );
 			}
-
-			Gauss3.gauss(sigma1, Views.extendMirrorSingle( inputFloat ), gauss1, service);
-			Gauss3.gauss(sigma2, Views.extendMirrorSingle( inputFloat ), gauss2, service);
 		}
 		else
 		{
 			maskFloat = ImgLib2Tools.convertVirtual( mask );
 
-			gauss1 = computeGauss( inputFloat, maskFloat, new FloatType(), sigma1, blockSize );
-			gauss2 = computeGauss( inputFloat, maskFloat, new FloatType(), sigma2, blockSize );
+			gauss1 = LazyWeightedGauss.init( Views.extendMirrorSingle( inputFloat ), Views.extendZero( maskFloat ), new FinalInterval( inputFloat ), new FloatType(), sigma1, blockSize );
+			gauss2 = LazyWeightedGauss.init( Views.extendMirrorSingle( inputFloat ), Views.extendZero( maskFloat ), new FinalInterval( inputFloat ), new FloatType(), sigma2, blockSize );
 		}
 
 		final RandomAccessibleInterval< FloatType > dog = Converters.convert(gauss2, gauss1, new BiConverter<FloatType, FloatType, FloatType>()
@@ -255,12 +271,16 @@ public class DoGImgLib2
 		}, new FloatType() );
 
 		//avoid double-caching for weighted gauss (i.e. mask != null)
-		final RandomAccessibleInterval< FloatType > dogCached = (mask == null) ? FusionTools.cacheRandomAccessibleInterval( dog, new FloatType(), blockSize ) : dog;
+		//final RandomAccessibleInterval< FloatType > dogCached = (mask == null) ? FusionTools.cacheRandomAccessibleInterval( dog, new FloatType(), blockSize ) : dog;
+		final RandomAccessibleInterval< FloatType > dogCached = dog;
 
 		if ( !silent )
 			IOFunctions.println("(" + new Date(System.currentTimeMillis()) + "): Detecting peaks." );
 
 		final ArrayList< SimplePeak > peaks = findPeaks( dogCached, maskFloat, minInitialPeakValue, service );
+
+		if ( !silent )
+			IOFunctions.println("(" + new Date(System.currentTimeMillis()) + "): Found " + peaks.size() + " peaks." );
 
 		final ArrayList< InterestPoint > finalPeaks;
 
@@ -271,13 +291,13 @@ public class DoGImgLib2
 		else if ( localization == 1 )
 		{
 			// TODO: remove last Imglib1 crap
-			final Img< FloatType > dogCopy = new ArrayImgFactory<>( new FloatType() ).create( dogCached );
+			//final Img< FloatType > dogCopy = new ArrayImgFactory<>( new FloatType() ).create( dogCached );
 
-			if ( !silent )
-				IOFunctions.println("(" + new Date(System.currentTimeMillis()) + "): Mem-copying image." );
+			//if ( !silent )
+			//	IOFunctions.println("(" + new Date(System.currentTimeMillis()) + "): Mem-copying image." );
 
-			FusionTools.copyImg( Views.zeroMin( dogCached ), dogCopy, service );
-			final Image<mpicbg.imglib.type.numeric.real.FloatType> imglib1 = ImgLib2.wrapArrayFloatToImgLib1( dogCopy );
+			//FusionTools.copyImg( Views.zeroMin( dogCached ), dogCopy, service );
+			//final Image<mpicbg.imglib.type.numeric.real.FloatType> imglib1 = ImgLib2.wrapArrayFloatToImgLib1( dogCopy );
 
 			for ( final SimplePeak peak : peaks )
 				for ( int d = 0; d < peak.location.length; ++d )
@@ -286,7 +306,7 @@ public class DoGImgLib2
 			if ( !silent )
 				IOFunctions.println("(" + new Date(System.currentTimeMillis()) + "): Quadratic localization." );
 
-			finalPeaks = Localization.computeQuadraticLocalization( peaks, imglib1, findMin, findMax, minPeakValue, true, numThreads );
+			finalPeaks = Localization.computeQuadraticLocalization( peaks, Views.extendMirrorDouble( Views.zeroMin( dogCached ) ), new FinalInterval( Views.zeroMin( dogCached ) ), findMin, findMax, minPeakValue, true, service );
 
 			// adjust detections for min coordinates of the RandomAccessibleInterval
 			for ( final InterestPoint ip : finalPeaks )
@@ -307,37 +327,6 @@ public class DoGImgLib2
 			IOFunctions.println("(" + new Date(System.currentTimeMillis()) + "): Found " + finalPeaks.size() + " peaks." );
 
 		return finalPeaks;
-	}
-
-	public static < T extends RealType< T > & NativeType<T> > RandomAccessibleInterval< T > computeGauss(
-			final RandomAccessibleInterval< T > input,
-			final RandomAccessibleInterval< T > mask,
-			final T type,
-			final double[] sigma,
-			final int[] blockSize )
-	{
-		final long[] min= new long[ input.numDimensions() ];
-		input.min( min );
-
-		final WeightedGaussRA< T > weightedgauss =
-				new WeightedGaussRA<>(
-						min,
-						Views.extendMirrorSingle( input ),
-						Views.extendZero( mask ),
-						type.createVariable(),
-						sigma );
-
-		weightedgauss.total = new FinalInterval( input );
-
-		final RandomAccessibleInterval<T> gauss = Views.translate( Lazy.process(new FinalInterval( input ), blockSize, type.createVariable(), AccessFlags.setOf(), weightedgauss ), min );
-		//final Cache< ?, ? > gradientCache = ((CachedCellImg< ?, ? >)gradient).getCache();
-
-		return gauss;
-
-		//final RandomAccessibleInterval< T > output = Views.translate( new ArrayImgFactory<>(type).create( input ), min );
-		//copy(gauss, output);
-		//FusionTools.copyImg( (RandomAccessibleInterval)gauss, (RandomAccessibleInterval)output, DeconViews.createExecutorService() );
-		//return output;
 	}
 
 	public static ArrayList<SimplePeak> findPeaks( final RandomAccessibleInterval< FloatType > laPlace, final RandomAccessibleInterval< FloatType > laPlaceMask, final float minValue, final ExecutorService service )
@@ -572,5 +561,207 @@ public class DoGImgLib2
 		//taskExecutor.shutdown();
 		
 		return new float[]{ min, max };
+	}
+
+	public static RandomAccessibleInterval< FloatType > computeGaussCUDA(
+			final RandomAccessibleInterval< FloatType > inputFloatNonZeroMin,
+			final double[] sigma,
+			final CUDASeparableConvolution cuda,
+			final CUDADevice cudaDevice,
+			final boolean accurateCUDA,
+			final double percentGPUMem )
+	{
+		final long[] offset = inputFloatNonZeroMin.minAsLongArray();
+		final RandomAccessibleInterval< FloatType > inputFloat = Views.zeroMin( inputFloatNonZeroMin );
+		final Img<FloatType> result;
+		final CUDASeparableConvolutionFunctions cudaconvolve =  new CUDASeparableConvolutionFunctions( cuda, cudaDevice.getDeviceId() );
+
+		// do not operate at the edge, 80% of the memory is a good idea I think
+		final long memAvail = Math.round( cudaDevice.getFreeDeviceMemory() * ( percentGPUMem / 100.0 ) );
+		final long imgBytes = numPixels( inputFloat, accurateCUDA, sigma ) * 4 * 2; // float, two images on the card at once
+
+		final long[] numBlocksDim = net.imglib2.util.Util.int2long( computeNumBlocksDim( memAvail, imgBytes, percentGPUMem, inputFloat.numDimensions(), "CUDA-Device " + cudaDevice.getDeviceId() ) );
+		final BlockGenerator< Block > generator;
+
+		if ( accurateCUDA )
+			generator = new BlockGeneratorVariableSizePrecise( numBlocksDim );
+		else
+			generator = new BlockGeneratorVariableSizeSimple( numBlocksDim );
+
+		final List< Block > blocks = generator.divideIntoBlocks( inputFloat.dimensionsAsLongArray(), getKernelSize( sigma ) );
+
+		if ( !accurateCUDA && blocks.size() == 1 /*&& ArrayImg.class.isInstance( inputFloat )*/ )
+		{
+			result =  new ArrayImgFactory<FloatType>( new FloatType() ).create( inputFloat );
+
+			IOFunctions.println( "Conovlving image as one single block." );
+			long time = System.currentTimeMillis();
+
+			// copy the only directly into the result
+			blocks.get( 0 ).copyBlock( inputFloat, result );
+			long copy = System.currentTimeMillis();
+			IOFunctions.println( "Copying data took " + ( copy - time ) + "ms" );
+
+			// convolve
+			final float[] resultF = ((FloatArray)((ArrayImg< net.imglib2.type.numeric.real.FloatType, ? > )result).update( null ) ).getCurrentStorageArray();
+			cudaconvolve.gauss( resultF, getImgSizeInt( result ), sigma, OutOfBounds.EXTEND_BORDER_PIXELS, 0 );
+			IOFunctions.println( "Convolution took " + ( System.currentTimeMillis() - copy ) + "ms using device=" + cudaDevice.getDeviceName() + " (id=" + cudaDevice.getDeviceId() + ")" );
+
+			// no copy back required
+		}
+		else
+		{
+			final RandomAccessible< FloatType > input;
+
+			if ( accurateCUDA )
+				input = Views.extendMirrorSingle( inputFloat );
+			else
+				input = inputFloat;
+
+			result =  new CellImgFactory<FloatType>( new FloatType() ).create( inputFloat );
+
+			for( final Block block : blocks )
+			{
+				//long time = System.currentTimeMillis();
+				final ArrayImg< FloatType, FloatArray > imgBlock = ArrayImgs.floats( block.getBlockSize() );
+
+				// copy the block
+				block.copyBlock( input, imgBlock );
+				//long copy = System.currentTimeMillis();
+				//IOFunctions.println( "Copying block took " + ( copy - time ) + "ms" );
+
+				// convolve
+				final float[] imgBlockF = ((FloatArray)((ArrayImg< net.imglib2.type.numeric.real.FloatType, ? > )imgBlock).update( null ) ).getCurrentStorageArray();
+				cudaconvolve.gauss( imgBlockF, getImgSizeInt( imgBlock ), sigma, OutOfBounds.EXTEND_BORDER_PIXELS, 0 );
+				//long convolve = System.currentTimeMillis();
+				//IOFunctions.println( "Convolution took " + ( convolve - copy ) + "ms using device=" + cudaDevice.getDeviceName() + " (id=" + cudaDevice.getDeviceId() + ")" );
+
+				// no copy back required
+				block.pasteBlock( result, imgBlock );
+				//IOFunctions.println( "Pasting block took " + ( System.currentTimeMillis() - convolve ) + "ms" );
+			}
+		}
+
+		if ( Views.isZeroMin( inputFloatNonZeroMin ) )
+			return result;
+		else
+			return Views.translate( result, offset );
+	}
+
+	public static int[] getImgSizeInt( final Interval img )
+	{
+		final int[] dim = new int[ img.numDimensions() ];
+		for ( int d = 0; d < img.numDimensions(); ++d )
+			dim[ d ] = (int)img.dimension( d );
+		return dim;
+	}
+
+
+	protected static long[] getKernelSize( final double[] sigma )
+	{
+		final long[] dim = new long[ sigma.length ];
+		for ( int d = 0; d < sigma.length; ++d )
+			dim[ d ] = Util.createGaussianKernel1DDouble( sigma[ d ], false ).length;
+		return dim;
+	}
+
+	public static int[] computeNumBlocksDim( final long memAvail, final long memReq, final double percentGPUMem, final int n, final String start )
+	{
+		final int numBlocks = (int)( memReq / memAvail + Math.min( 1, memReq % memAvail ) );
+		final double blocksPerDim = Math.pow( numBlocks, 1 / n );
+
+		final int[] numBlocksDim = new int[ n ];
+
+		for ( int d = 0; d < numBlocksDim.length; ++d )
+			numBlocksDim[ d ] = (int)Math.round( Math.floor( blocksPerDim ) ) + 1;
+
+		int numBlocksCurrent;
+		
+		do
+		{
+			numBlocksCurrent = numBlocks( numBlocksDim );
+
+			for ( int d = 0; d < numBlocksDim.length; ++d )
+			{
+				++numBlocksDim[ d ];
+				reduceBlockNumbers( numBlocksDim, numBlocks );
+			}
+			
+			
+		}
+		while ( numBlocks( numBlocksDim ) < numBlocksCurrent );
+
+		if ( start != null )
+		{
+			String out =
+					start + ", mem=" + memAvail / (1024*1024) + 
+					"MB (" + Math.round( percentGPUMem / 100 ) + "%), required mem=" + memReq / (1024*1024) + "MB, need to split up into " + numBlocks + " blocks: ";
+
+			for ( int d = 0; d < numBlocksDim.length; ++d )
+			{
+				out += numBlocksDim[ d ];
+				if ( d != numBlocksDim.length - 1 )
+					out += "x";
+			}
+
+			IOFunctions.println( out );
+		}
+		return numBlocksDim;
+	}
+
+	protected static void reduceBlockNumbers( final int[] numBlocksDim, final int numBlocks )
+	{
+		boolean reduced;
+
+		do
+		{
+			reduced = false;
+
+			for ( int d = numBlocksDim.length - 1; d >= 0 ; --d )
+			{
+				if ( numBlocksDim[ d ] > 1 )
+				{
+					--numBlocksDim[ d ];
+
+					if ( numBlocks( numBlocksDim ) < numBlocks )
+						++numBlocksDim[ d ];
+					else
+						reduced = true;
+				}
+			}
+		}
+		while ( reduced );
+	}
+
+	protected static int numBlocks( final int[] numBlocksDim )
+	{
+		int numBlocks = 1;
+
+		for ( int d = 0; d < numBlocksDim.length; ++d )
+			numBlocks *= numBlocksDim[ d ];
+
+		return numBlocks;
+	}
+
+	protected static long numPixels( final Dimensions dim, final boolean accurate, final double[] sigma )
+	{
+		if ( accurate )
+		{
+			long size = 1;
+
+			for ( int d = 0; d < dim.numDimensions(); ++d )
+				size *= dim.dimension( d ) + Util.createGaussianKernel1DDouble( sigma[ d ], false ).length - 1;
+
+			return size;
+		}
+		else
+		{
+			long numPixels = dim.dimension( 0 );
+
+			for ( int d = 1; d <= dim.numDimensions(); ++d )
+				numPixels *= dim.dimension( d );
+
+			return numPixels;
+		}
 	}
 }
