@@ -511,11 +511,8 @@ public class FusionTools
 						for ( int d = 0; d < 3; ++d )
 							scalefactors[ d ] = Double.valueOf(downsamplingContentBased).longValue();
 						
-						//initialize new image construct, then downsample 
-						final ExecutorService service = Threads.createFixedExecutorService( Threads.numThreads() );
-						RandomAccessibleInterval inputImg_cb = Downsample.downsample( inputImg, scalefactors, service );
-						//DisplayImage.getImagePlusInstance( inputImg_cb, false, "Debug Downsample", (double) 0, (double) 255 ).show(); //Debug
-						service.shutdown();
+						//downsample image for weight calculation
+						RandomAccessibleInterval inputImg_cb = Downsample.downsample( inputImg, scalefactors );
 						
 						//get new AffineTransform3D for adjusting convolution kernels and re-up-scaling weight image
 						AffineTransform3D model_cb_up = model.copy();
@@ -525,10 +522,6 @@ public class FusionTools
 						adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, model_cb_up );
 
 						transformedContentBased = TransformWeight.transformContentBased( inputImg_cb, new CellImgFactory< ComplexFloatType >(), sigma1, sigma2, model_cb_up, bb );
-						//IOFunctions.println( "  model: " + TransformationTools.printAffine3D( model ) ); //Debug
-						//IOFunctions.println( "  model_cb_down: " + TransformationTools.printAffine3D( model_cb_down ) ); //Debug
-						//IOFunctions.println( "  model_cb_up: " + TransformationTools.printAffine3D( model_cb_up ) ); //Debug
-						//DisplayImage.getImagePlusInstance( transformedContentBased, false, "Debug Content", (double) 0, (double) 65535 ).show(); //Debug
 					}
 					else
 					{
