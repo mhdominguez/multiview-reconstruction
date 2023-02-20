@@ -520,6 +520,8 @@ public class FusionTools
 						
 						// adjust both for z-scaling (anisotropy), downsampling, and registrations itself
 						adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, model_cb_up );
+						
+						System.out.println( "Adjusted content based 2x-4x sigma1=" + Util.printCoordinates( sigma1 ) + " , sigma2="+ Util.printCoordinates( sigma2 ));
 
 						transformedContentBased = TransformWeight.transformContentBased( inputImg_cb, new CellImgFactory< ComplexFloatType >(), sigma1, sigma2, model_cb_up, bb );
 					}
@@ -527,6 +529,8 @@ public class FusionTools
 					{
 						// adjust both for z-scaling (anisotropy), downsampling, and registrations itself
 						adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, model );
+						
+						System.out.println( "Adjusted content based 1x sigma1=" + Util.printCoordinates( sigma1 ) + " , sigma2="+ Util.printCoordinates( sigma2 ));
 
 						transformedContentBased = TransformWeight.transformContentBased( inputImg, new CellImgFactory< ComplexFloatType >(), sigma1, sigma2, model, bb );
 						
