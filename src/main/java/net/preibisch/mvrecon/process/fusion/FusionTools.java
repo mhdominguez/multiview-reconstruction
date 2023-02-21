@@ -553,22 +553,23 @@ public class FusionTools
 						// get the scale factors
 						final double[] scalefactors = new double[ 3 ];
 						for ( int d = 0; d < 3; ++d )
-							scalefactors[ d ] = Double.valueOf(downsamplingContentBased).longValue();
+							scalefactors[ d ] = Double.valueOf( downsamplingContentBased ).longValue() * usedDownsampleFactors[ d ];
 
 						// downsample image for weight calculation
-						RandomAccessibleInterval inputImg_cb = Downsample.downsample( inputImg, scalefactors );
+						RandomAccessibleInterval inputImg_cb = DownsampleTools.openDownsampled( imgloader, viewId, model, usedDownsampleFactors );
+						//RandomAccessibleInterval inputImg_cb = Downsample.downsample( inputImg, scalefactors );
 
 						// get new AffineTransform3D for adjusting convolution kernels and re-up-scaling weight image
 						// AffineTransform3D model_cb_up = usedDownsampleFactors; // model.copy();
 						// transformScale( model_cb_up, downsamplingContentBased );
 
 						// adjust both for z-scaling (anisotropy), downsampling, and registrations itself
-						adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, usedDownsampleFactors );
+						//adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, usedDownsampleFactors );
 						adjustContentBased( viewDescriptions.get( viewId ), sigma1, sigma2, scalefactors );
 						
 						System.out.println( "Adjusted content based 2x-4x sigma1=" + Util.printCoordinates( sigma1 ) + " , sigma2="+ Util.printCoordinates( sigma2 ));
 
-						transformedContentBased = TransformWeight.transformContentBased( inputImg_cb, sigma1, sigma2, LazyFusionTools.defaultBlockSize3d, model, bb );
+						transformedContentBased = TransformWeight.transformContentBased( inputImg_cb, sigma1, sigma2, LazyFusionTools.defaultBlockSize3d, ContentBasedRealRandomAccessible.defaultScale, model, bb );
 					}
 					else
 					{
