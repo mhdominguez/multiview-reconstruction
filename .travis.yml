@@ -5,7 +5,7 @@ branches:
   only:
   - master
   - "/.*-[0-9]+\\..*/"
-  - adv-fusion-opt
+  - 1.0-content-based-sigma-check
 before_install:
   - sudo apt-get update
   - sudo apt-get install -y openjfx libopenjfx-java libopenjfx-jni
