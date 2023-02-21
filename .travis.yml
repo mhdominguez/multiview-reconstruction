@@ -9,8 +9,9 @@ branches:
 before_install:
   - sudo apt-get update
   - sudo apt-get install -y openjfx libopenjfx-java libopenjfx-jni
-  - sudo cp /usr/share/java/openjfx/lib/* /usr/lib/jvm/java-1.8.0-openjdk-amd64/lib
-  - sudo cp /usr/share/java/openjfx/jre/lib/ext/* /usr/lib/jvm/java-1.8.0-openjdk-amd64/lib
+  - ls -g /usr/share/java/openjfx/lib/
+  - ls -g /usr/share/java/openjfx/jre/lib/ext/
+  - ls -g /usr/lib/jvm/java-1.8.0-openjdk-amd64/lib/
 install: true
 script: ".travis/build.sh"
 cache:
