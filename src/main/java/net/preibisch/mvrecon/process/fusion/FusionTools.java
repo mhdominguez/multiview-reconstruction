@@ -556,7 +556,7 @@ public class FusionTools
 							scalefactors[ d ] = Double.valueOf( downsamplingContentBased ).longValue() * usedDownsampleFactors[ d ];
 
 						// downsample image for weight calculation
-						RandomAccessibleInterval inputImg_cb = DownsampleTools.openDownsampled( imgloader, viewId, model, usedDownsampleFactors );
+						RandomAccessibleInterval inputImg_cb = DownsampleTools.openDownsampled( imgloader, viewId, model, scalefactors );
 						//RandomAccessibleInterval inputImg_cb = Downsample.downsample( inputImg, scalefactors );
 
 						// get new AffineTransform3D for adjusting convolution kernels and re-up-scaling weight image

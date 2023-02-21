@@ -122,7 +122,7 @@ public class FusionGUI implements FusionExportInterface
 	protected int useContentBased = defaultUseContentBased;
 	protected boolean adjustIntensities = defaultAdjustIntensities;
 	protected boolean preserveAnisotropy = defaultPreserveAnisotropy;
-	protected double avgAnisoF;
+	protected double avgAnisoF = -1; // initialize with impossible value to know when to gather AnisoF from spimdata
 	protected int imgExport = defaultImgExportAlgorithm;
 
 	protected NonRigidParametersGUI nrgui;
@@ -165,8 +165,9 @@ public class FusionGUI implements FusionExportInterface
 		// get all bounding boxes and two extra ones
 		this.allBoxes = BoundingBoxTools.getAllBoundingBoxes( spimData, views, true );
 
-		// average anisotropy of input views
-		this.avgAnisoF = TransformationTools.getAverageAnisotropyFactor( spimData, views );
+		// average anisotropy of input views: keep previous value when possible
+		if ( this.avgAnisoF <= 0 )
+			this.avgAnisoF = TransformationTools.getAverageAnisotropyFactor( spimData, views );
 	}
 
 	@Override

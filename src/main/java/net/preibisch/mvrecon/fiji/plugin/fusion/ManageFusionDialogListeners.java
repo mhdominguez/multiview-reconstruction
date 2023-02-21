@@ -129,7 +129,7 @@ public class ManageFusionDialogListeners
 		fusion.useContentBased = contentbasedCheckbox.getSelectedIndex();
 		fusion.splittingType = splitChoice.getSelectedIndex();
 
-		fusion.rotationChoice = rotationChoice.getSelectedIndex();
+		fusion.rotationType = rotationChoice.getSelectedIndex();
 		/*if ( anisoCheckbox != null )
 		{
 			fusion.preserveAnisotropy = anisoCheckbox.getState();
@@ -150,6 +150,7 @@ public class ManageFusionDialogListeners
 		{
 			fusion.preserveAnisotropy = true;
 		}
+		fusion.avgAnisoF = this.anisoF;
 
 		final BoundingBox bb = fusion.allBoxes.get( fusion.boundingBox );
 		final long numPixels = Math.round( FusionTools.numPixels( bb, fusion.downsampling ) / anisoF );
