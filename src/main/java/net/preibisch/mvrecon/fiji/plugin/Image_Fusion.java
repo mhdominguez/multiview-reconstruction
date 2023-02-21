@@ -131,7 +131,7 @@ public class Image_Fusion implements PlugIn
 				max[ 2 ] = temp_minmax[ 1 ];	
 			}			
 
-			final Interval boundingBox = new Interval( min, max );
+			final Interval boundingBox = new FinalInterval( min, max );
 			
 			// we need to update the bounding box here
 			fusion.setBoundingBox( boundingBox );
@@ -158,10 +158,6 @@ public class Image_Fusion implements PlugIn
 
 			// we need to update the bounding box here
 			fusion.setBoundingBox( scaledBB.getA() );
-		}
-		else
-		{
-			anisoF = 1.0;
 		}
 
 		// query exporter parameters
@@ -252,7 +248,7 @@ public class Image_Fusion implements PlugIn
 						viewsToUse,
 						fusion.getNonRigidParameters().getLabels(),
 						fusion.useBlending(),
-						( fusion.useContentBased() > 0 ),
+						fusion.useContentBased(),
 						fusion.getNonRigidParameters().showDistanceMap(),
 						Util.getArrayFromValue( fusion.getNonRigidParameters().getControlPointDistance(), 3 ),
 						fusion.getNonRigidParameters().getAlpha(),

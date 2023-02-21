@@ -72,7 +72,7 @@ public class ManageFusionDialogListeners
 		//this.cachingChoice = cachingChoice;
 		this.nonRigidChoice = nonRigidChoice;
 		this.contentbasedCheckbox = contentbasedCheckbox;
-		this.anisoCheckbox = anisoCheckbox;
+		//this.anisoCheckbox = anisoCheckbox;
 		this.downsampleZField = downsampleZField;
 		this.splitChoice = splitChoice;
 		this.label1 = label1;
@@ -101,14 +101,16 @@ public class ManageFusionDialogListeners
 		this.contentbasedCheckbox.addItemListener( new ItemListener() { @Override
 			public void itemStateChanged(ItemEvent e) { update(); } });
 
-		if ( this.anisoCheckbox != null )
+		/*if ( this.anisoCheckbox != null )
 		{
 			this.anisoF = fusion.getAnisotropyFactor();
 			this.anisoCheckbox.addItemListener( new ItemListener() { @Override
 				public void itemStateChanged(ItemEvent e) { update(); } });
 			this.downsampleZField.addTextListener( new TextListener() { @Override
 				public void textValueChanged(TextEvent e) { update(); } });
-		}
+		}*/
+		this.downsampleZField.addTextListener( new TextListener() { @Override
+			public void textValueChanged(TextEvent e) { update(); } });
 	}
 
 	public void update()

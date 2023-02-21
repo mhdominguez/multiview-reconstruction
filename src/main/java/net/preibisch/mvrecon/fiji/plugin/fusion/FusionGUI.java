@@ -459,7 +459,7 @@ public class FusionGUI implements FusionExportInterface
 		IOFunctions.println( new Date( System.currentTimeMillis() ) + ": Selected Fusion Parameters: " );
 		IOFunctions.println( "Downsampling: " + DownsampleTools.printDownsampling( getDownsampling() ) );
 		IOFunctions.println( "BoundingBox: " + getBoundingBox() );
-		IOFunctions.println( "Rotation: " + rotationTypes[ rotationChoice ] );
+		IOFunctions.println( "Rotation: " + rotationTypes[ rotationType ] );
 		IOFunctions.println( "DownsampledBoundingBox: " + getDownsampledBoundingBox() );
 		IOFunctions.println( "PixelType: " + pixelTypes1[ getPixelType() ] );
 		IOFunctions.println( "Manually defined min/max: " + manuallyDefinedMinMax() );
