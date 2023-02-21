@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -394,9 +394,9 @@ public abstract class FilteredAndGroupedExplorerPanel<AS extends AbstractSpimDat
 			return;
 		
 		// we always set the fused mode
-		setFusedModeSimple( bdv, data );
+		//setFusedModeSimple( bdv, data );
 		
-		resetBDVManualTransformations( bdv );
+		//resetBDVManualTransformations( bdv );
 
 		if ( selectedRows == null || selectedRows.size() == 0 )
 			return;
@@ -406,7 +406,8 @@ public abstract class FilteredAndGroupedExplorerPanel<AS extends AbstractSpimDat
 
 		// always use the first timepoint
 		final TimePoint firstTP = firstVD.getTimePoint();
-		bdv.getViewer().setTimepoint( getBDVTimePointIndex( firstTP, data ) );
+		if ( bdv.getViewer().getState().getCurrentTimepoint() != getBDVTimePointIndex( firstTP, data ) )
+			bdv.getViewer().setTimepoint( getBDVTimePointIndex( firstTP, data ) );
 
 		final boolean[] active = new boolean[data.getSequenceDescription().getViewSetupsOrdered().size()];
 

@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -24,7 +24,7 @@ package util;
 
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.converter.Converter;
-import net.imglib2.converter.RealFloatConverter;
+import net.imglib2.converter.Converters;
 import net.imglib2.converter.read.ConvertedRandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
@@ -34,10 +34,12 @@ public class ImgLib2Tools
 {
 	public static final < T extends RealType< T > > RandomAccessibleInterval<FloatType> convertVirtual( final RandomAccessibleInterval< T > img )
 	{
+		return Converters.convertRAI( img, (i,o) -> o.set( i.getRealFloat() ), new FloatType());
+		/*
 		return new ConvertedRandomAccessibleInterval<T, FloatType>(
 				img,
 				new RealFloatConverter<T>(),
-				new FloatType() );
+				new FloatType() );*/
 	}
 
 	public static final < T extends RealType< T > > RandomAccessibleInterval<FloatType> normalizeVirtual( final RandomAccessibleInterval< T > img, final double min, final double max )

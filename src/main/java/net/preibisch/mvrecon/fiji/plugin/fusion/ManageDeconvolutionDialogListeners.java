@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -165,7 +165,7 @@ public class ManageDeconvolutionDialogListeners
 		label2.setText( "Dimensions: " + 
 				Math.round( (max[ 0 ] - min[ 0 ] + 1)/decon.downsampling ) + " x " + 
 				Math.round( (max[ 1 ] - min[ 1 ] + 1)/decon.downsampling ) + " x " + 
-				Math.round( (max[ 2 ] - min[ 2 ] + 1)/decon.downsampling ) + " pixels @ " + FusionGUI.pixelTypes[ 0 ] );
+				Math.round( (max[ 2 ] - min[ 2 ] + 1)/decon.downsampling ) + " pixels @ " + FusionGUI.pixelTypes1[ 0 ] );
 	}
 
 	public long[] maxBlock()

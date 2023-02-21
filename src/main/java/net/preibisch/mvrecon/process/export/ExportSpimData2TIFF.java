@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -93,22 +93,8 @@ public class ExportSpimData2TIFF implements ImgExport
 			final String title,
 			final Group< ? extends ViewId > fusionGroup )
 	{
-		return exportImage( img, bb, downsampling, anisoF, title, fusionGroup, Double.NaN, Double.NaN );
-	}
-
-	@Override
-	public < T extends RealType< T > & NativeType< T > > boolean exportImage(
-			final RandomAccessibleInterval<T> img,
-			final Interval bb,
-			final double downsampling,
-			final double anisoF,
-			final String title,
-			final Group< ? extends ViewId > fusionGroup,
-			final double min,
-			final double max )
-	{
 		// write the image
-		if ( !this.saver.exportImage( img, bb, downsampling, anisoF, title, fusionGroup, min, max ) )
+		if ( !this.saver.exportImage( img, bb, downsampling, anisoF, title, fusionGroup ) )
 			return false;
 
 		final ViewId newViewId = identifyNewViewId( newTimepoints, newViewSetups, fusionGroup, fusion );
@@ -192,6 +178,9 @@ public class ExportSpimData2TIFF implements ImgExport
 
 	@Override
 	public String getDescription() { return "Save as new XML Project (TIFF)"; }
+
+	@Override
+	public int[] blocksize() { return new int[] { 128, 128, 1}; }
 
 	public static ViewId identifyNewViewId(
 			final List< TimePoint > newTimepoints,

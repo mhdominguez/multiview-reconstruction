@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -50,6 +50,8 @@ import net.preibisch.mvrecon.process.fusion.transformed.TransformVirtual;
 import net.preibisch.mvrecon.process.fusion.transformed.TransformWeight;
 import net.preibisch.mvrecon.process.fusion.transformed.weightcombination.CombineWeightsRandomAccessibleInterval;
 import net.preibisch.mvrecon.process.fusion.transformed.weightcombination.CombineWeightsRandomAccessibleInterval.CombineType;
+import net.preibisch.mvrecon.process.fusion.transformed.weights.ContentBasedRealRandomAccessible;
+import net.preibisch.mvrecon.process.interestpointdetection.methods.dog.DoGImgLib2;
 import net.preibisch.mvrecon.process.downsampling.DownsampleTools;
 
 public class TestWeights
@@ -100,7 +102,8 @@ public class TestWeights
 			// this modifies the model so it maps from a smaller image to the global coordinate space,
 			// which applies for the image itself as well as the weights since they also use the smaller
 			// input image as reference
-			final RandomAccessibleInterval inputImg = DownsampleTools.openDownsampled( imgloader, viewId, model );
+			final double[] usedDownsamplingFactors = new double[ 3 ];
+			final RandomAccessibleInterval inputImg = DownsampleTools.openDownsampled( imgloader, viewId, model, usedDownsamplingFactors );
 			final RandomAccessibleInterval transformedInput = TransformView.transformView( inputImg, model, bb, 0, 1 );
 
 			final float[] blending =  Util.getArrayFromValue( FusionTools.defaultBlendingRange, 3 );
@@ -118,14 +121,15 @@ public class TestWeights
 			System.out.println( "Default sigma1 = " + Util.printCoordinates( sigma1 ) );
 			System.out.println( "Default sigma2 = " + Util.printCoordinates( sigma2 ) );
 			// adjust both for z-scaling (anisotropy), downsampling, and registrations itself
-			FusionTools.adjustContentBased( spimData.getSequenceDescription().getViewDescription( viewId ), sigma1, sigma2, model );
+			FusionTools.adjustContentBased( spimData.getSequenceDescription().getViewDescription( viewId ), sigma1, sigma2, usedDownsamplingFactors );
 			System.out.println( "Adjusted sigma1 = " + Util.printCoordinates( sigma1 ) );
 			System.out.println( "Adjusted sigma2 = " + Util.printCoordinates( sigma2 ) );
 
 			final RandomAccessibleInterval< FloatType > transformedContentBased = TransformWeight.transformContentBased(
 					inputImg,
-					new CellImgFactory< ComplexFloatType >(),
-					sigma1, sigma2, model, bb );
+					sigma1, sigma2,
+					DoGImgLib2.blockSize, ContentBasedRealRandomAccessible.defaultScale,
+					model, bb );
 
 			final RandomAccessibleInterval< FloatType > combinedWeights = 
 					new CombineWeightsRandomAccessibleInterval(

@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -26,29 +26,26 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.Sets;
 
-import ij.IJ;
 import ij.ImageJ;
 import ij.plugin.PlugIn;
-import mpicbg.spim.data.registration.ViewRegistration;
 import mpicbg.spim.data.sequence.SetupImgLoader;
 import mpicbg.spim.data.sequence.ViewDescription;
 import mpicbg.spim.data.sequence.ViewId;
-import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.converter.Converter;
+import net.imglib2.converter.RealUnsignedByteConverter;
 import net.imglib2.converter.RealUnsignedShortConverter;
-import net.imglib2.converter.read.ConvertedRandomAccessibleInterval;
-import net.imglib2.img.ImagePlusAdapter;
-import net.imglib2.img.display.imagej.ImageJFunctions;
-import net.imglib2.img.imageplus.ImagePlusImgFactory;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
+import net.imglib2.type.Type;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
@@ -62,9 +59,11 @@ import net.preibisch.mvrecon.fiji.plugin.queryXML.GenericLoadParseQueryXML;
 import net.preibisch.mvrecon.fiji.plugin.queryXML.LoadParseQueryXML;
 import net.preibisch.mvrecon.fiji.spimdata.SpimData2;
 import net.preibisch.mvrecon.process.export.Calibrateable;
-import net.preibisch.mvrecon.process.export.DisplayImage;
 import net.preibisch.mvrecon.process.export.ImgExport;
 import net.preibisch.mvrecon.process.fusion.FusionTools;
+import net.preibisch.mvrecon.process.fusion.lazy.LazyAffineFusion;
+import net.preibisch.mvrecon.process.fusion.lazy.LazyNonRigidFusion;
+import net.preibisch.mvrecon.process.fusion.transformed.TransformVirtual;
 import net.preibisch.mvrecon.process.fusion.transformed.nonrigid.NonRigidTools;
 import net.preibisch.mvrecon.process.interestpointregistration.TransformationTools;
 import net.preibisch.mvrecon.process.interestpointregistration.pairwise.constellation.grouping.Group;
@@ -100,23 +99,17 @@ public class Image_Fusion implements PlugIn
 
 		final List< Group< ViewDescription > > groups = fusion.getFusionGroups();
 		int i = 0;
-		
-		final double anisoF;
-		if ( !(Double.isNaN( fusion.getAnisotropyFactor() )) || fusion.getRotationType() > 0 ) // flatten the fused image or rotate bounding box and all views
-		{
-			if ( Double.isNaN( fusion.getAnisotropyFactor() ) )
-				anisoF = 1.0;
-			else
-				anisoF = fusion.getAnisotropyFactor();
 
-			Interval bb = fusion.getBoundingBox();
+		// handle orthogonal view fusion requests
+		if ( fusion.getRotationType() > 0 ) 
+		{
+			final Interval bb = fusion.getBoundingBox();
 			final long[] min = new long[ 3 ];
 			final long[] max = new long[ 3 ];
 
 			bb.min( min );
 			bb.max( max );
 			
-			//handle orthogonal view fusion requests, note view transformations handled below
 			if (fusion.getRotationType() == 1) // X-Z swap
 			{
 				final long[] temp_minmax = new long[ 2 ]; // store temporary values here
@@ -138,13 +131,33 @@ public class Image_Fusion implements PlugIn
 				max[ 2 ] = temp_minmax[ 1 ];	
 			}			
 
-			min[ 2 ] = Math.round( Math.floor( min[ 2 ] / anisoF ) );
-			max[ 2 ] = Math.round( Math.ceil( max[ 2 ] / anisoF ) );
-
-			final Interval boundingBox = new FinalInterval( min, max );
-
+			final Interval boundingBox = new Interval( min, max );
+			
 			// we need to update the bounding box here
 			fusion.setBoundingBox( boundingBox );
+		}
+		
+		// adjust bounding box for preserve anisotropy
+		if ( !Double.isNaN( fusion.getAnisotropyFactor() ) )
+		{
+			final Pair<Interval, AffineTransform3D> scaledBB =
+					FusionTools.createAnisotropicBoundingBox(
+							fusion.getBoundingBox(),
+							fusion.getAnisotropyFactor() );
+
+			// we need to update the bounding box here
+			fusion.setBoundingBox( scaledBB.getA() );
+		}
+
+		// adjust bounding box for downsampling
+		if ( !Double.isNaN( fusion.getDownsampling() ) )
+		{
+			final Pair< Interval, AffineTransform3D > scaledBB =
+					FusionTools.createDownsampledBoundingBox( fusion.getBoundingBox(), fusion.getDownsampling() );
+			// final AffineTransform3D bbTransform = scaledBB.getB();
+
+			// we need to update the bounding box here
+			fusion.setBoundingBox( scaledBB.getA() );
 		}
 		else
 		{
@@ -190,118 +203,132 @@ public class Image_Fusion implements PlugIn
 				viewsToUse = null;
 			}
 
-			final Interval boundingBox = fusion.getBoundingBox();
+			final int[] blocksize = exporter.blocksize();
+			IOFunctions.println( "(" + new Date( System.currentTimeMillis() ) + "): block size used during fusion: " + Util.printCoordinates( blocksize ) );
 
-			final RandomAccessibleInterval< FloatType > virtual;
+			final Converter conv;
+			final Type type;
 
-			if ( Double.isNaN( fusion.getAnisotropyFactor() ) && fusion.getRotationType() == 0 ) // no flattening of the fused image, no rotation of bb and views
+			if ( fusion.getPixelType() == 2 )
 			{
-				if ( fusion.getNonRigidParameters().isActive() )
-				{
-					virtual = NonRigidTools.fuseVirtualInterpolatedNonRigid(
-									spimData,
-									group.getViews(),
-									viewsToUse,
-									fusion.getNonRigidParameters().getLabels(),
-									fusion.useBlending(),
-									( fusion.useContentBased() > 0 ),
-									fusion.getNonRigidParameters().showDistanceMap(),
-									Util.getArrayFromValue( fusion.getNonRigidParameters().getControlPointDistance(), 3 ),
-									fusion.getNonRigidParameters().getAlpha(),
-									false,
-									fusion.getInterpolation(),
-									boundingBox,
-									fusion.getDownsampling(),
-									fusion.adjustIntensities() ? spimData.getIntensityAdjustments().getIntensityAdjustments() : null,
-									taskExecutor ).getA();
-				}
-				else
-				{
-					virtual = FusionTools.fuseVirtual(
-						spimData,
+				conv = new RealUnsignedByteConverter<>( fusion.minIntensity(), fusion.maxIntensity() );
+				type = new UnsignedByteType();
+			}
+			else if ( fusion.getPixelType() == 1 )
+			{
+				conv = new RealUnsignedShortConverter<>( fusion.minIntensity(), fusion.maxIntensity() );
+				type = new UnsignedShortType();
+			}
+			else
+			{
+				conv = null;
+				type = new FloatType();
+			}
+			
+			// get, and update the transformations with anisotropy, downsampling
+			final Set< ? extends ViewId > views =
+					fusion.getNonRigidParameters().isActive() ?
+							Sets.union( group.getViews(), viewsToUse.stream().collect( Collectors.toSet() ) ) : group.getViews();
+
+			final HashMap< ViewId, AffineTransform3D > registrations =
+					TransformVirtual.adjustAllTransforms(
+							views,
+							spimData.getViewRegistrations().getViewRegistrations(),
+							fusion.getRotationType(),
+							fusion.getAnisotropyFactor(),
+							fusion.getDownsampling() );
+
+			final RandomAccessibleInterval lazy;
+
+			if ( fusion.getNonRigidParameters().isActive() )
+			{
+				lazy = LazyNonRigidFusion.init(
+						conv,
+						spimData.getSequenceDescription().getImgLoader(),
+						registrations,
+						spimData.getViewInterestPoints().getViewInterestPoints(),
+						spimData.getSequenceDescription().getViewDescriptions(),
+						group.getViews(),
+						viewsToUse,
+						fusion.getNonRigidParameters().getLabels(),
+						fusion.useBlending(),
+						( fusion.useContentBased() > 0 ),
+						fusion.getNonRigidParameters().showDistanceMap(),
+						Util.getArrayFromValue( fusion.getNonRigidParameters().getControlPointDistance(), 3 ),
+						fusion.getNonRigidParameters().getAlpha(),
+						false,
+						fusion.getInterpolation(),
+						fusion.adjustIntensities() ? spimData.getIntensityAdjustments().getIntensityAdjustments() : null,
+						taskExecutor,
+						fusion.getBoundingBox(),
+						(RealType & NativeType)type,
+						blocksize );
+
+				// TODO: replace with LazyAffineFusion and varying blocksizes depending on the task
+				/*
+				virtual = NonRigidTools.fuseVirtualInterpolatedNonRigid(
+								spimData.getSequenceDescription().getImgLoader(),
+								registrations,
+								spimData.getViewInterestPoints().getViewInterestPoints(),
+								spimData.getSequenceDescription().getViewDescriptions(),
+								group.getViews(),
+								viewsToUse,
+								fusion.getNonRigidParameters().getLabels(),
+								fusion.useBlending(),
+								fusion.useContentBased(),
+								fusion.getNonRigidParameters().showDistanceMap(),
+								Util.getArrayFromValue( fusion.getNonRigidParameters().getControlPointDistance(), 3 ),
+								fusion.getNonRigidParameters().getAlpha(),
+								false,
+								fusion.getInterpolation(),
+								fusion.getBoundingBox(),
+								fusion.adjustIntensities() ? spimData.getIntensityAdjustments().getIntensityAdjustments() : null,
+								taskExecutor );
+				*/
+			}
+			else
+			{
+				lazy = LazyAffineFusion.init(
+						conv,
+						spimData.getSequenceDescription().getImgLoader(),
+						group.getViews(),
+						registrations,
+						spimData.getSequenceDescription().getViewDescriptions(),
+						fusion.useBlending(), // blending
+						fusion.useContentBased(), // content based
+						fusion.getInterpolation(), // linear interpolatio
+						fusion.adjustIntensities() ? spimData.getIntensityAdjustments().getIntensityAdjustments() : null,
+						fusion.getBoundingBox(),
+						(RealType & NativeType)type,
+						blocksize );
+
+				// TODO: replace with LazyAffineFusion and varying blocksizes depending on the task
+				/*
+				virtual = FusionTools.fuseVirtual(
+						spimData.getSequenceDescription().getImgLoader(),
+						registrations,
+						spimData.getSequenceDescription().getViewDescriptions(),
 						group.getViews(),
 						fusion.useBlending(),
 						fusion.useContentBased(),
 						fusion.getInterpolation(),
-						boundingBox,
-						fusion.getDownsampling(),
-						fusion.adjustIntensities() ? spimData.getIntensityAdjustments().getIntensityAdjustments() : null ).getA();
-				}
-			}
-			else
-			{
-				// update the transformations
-				final HashMap< ViewId, AffineTransform3D > registrations = new HashMap<>();
-
-				// get updated registration for views to fuse AND all other views that may influence the fusion
-				for ( final ViewId viewId : fusion.getNonRigidParameters().isActive() ? 
-						Sets.union( group.getViews(), viewsToUse.stream().collect( Collectors.toSet() ) ) : group.getViews() )
-				{
-					final ViewRegistration vr = spimData.getViewRegistrations().getViewRegistration( viewId );
-					vr.updateModel();
-					final AffineTransform3D model = vr.getModel().copy();
-					
-					//handle orthogonal view fusion requests, note bounding box was modified above
-					if (fusion.getRotationType() == 1) // X-Z swap (left-right)
-					{
-						final AffineTransform3D rotate90 = new AffineTransform3D();
-						rotate90.set (0.0, 0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0);
-						model.preConcatenate( rotate90 );	
-					}
-					else if (fusion.getRotationType() == 2) // Y-Z swap (top-bottom)
-					{
-						final AffineTransform3D rotate90 = new AffineTransform3D();
-						rotate90.set (1.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
-						model.preConcatenate( rotate90 );
-					}
-					
-					final AffineTransform3D aniso = new AffineTransform3D();
-					aniso.set(
-							1.0, 0.0, 0.0, 0.0,
-							0.0, 1.0, 0.0, 0.0,
-							0.0, 0.0, 1.0/anisoF, 0.0 );
-					model.preConcatenate( aniso );
-					registrations.put( viewId, model );
-				}
-
-				if ( fusion.getNonRigidParameters().isActive() )
-				{
-					virtual = NonRigidTools.fuseVirtualInterpolatedNonRigid(
-									spimData.getSequenceDescription().getImgLoader(),
-									registrations,
-									spimData.getViewInterestPoints().getViewInterestPoints(),
-									spimData.getSequenceDescription().getViewDescriptions(),
-									group.getViews(),
-									viewsToUse,
-									fusion.getNonRigidParameters().getLabels(),
-									fusion.useBlending(),
-									( fusion.useContentBased() > 0 ),
-									fusion.getNonRigidParameters().showDistanceMap(),
-									Util.getArrayFromValue( fusion.getNonRigidParameters().getControlPointDistance(), 3 ),
-									fusion.getNonRigidParameters().getAlpha(),
-									false,
-									fusion.getInterpolation(),
-									boundingBox,
-									fusion.getDownsampling(),
-									fusion.adjustIntensities() ? spimData.getIntensityAdjustments().getIntensityAdjustments() : null,
-									taskExecutor ).getA();
-				}
-				else
-				{
-					virtual = FusionTools.fuseVirtual(
-							spimData.getSequenceDescription().getImgLoader(),
-							registrations,
-							spimData.getSequenceDescription().getViewDescriptions(),
-							group.getViews(),
-							fusion.useBlending(),
-							fusion.useContentBased(),
-							fusion.getInterpolation(),
-							boundingBox,
-							fusion.getDownsampling(),
-							fusion.adjustIntensities() ? spimData.getIntensityAdjustments().getIntensityAdjustments() : null ).getA();
-				}
+						fusion.getBoundingBox(),
+						fusion.adjustIntensities() ? spimData.getIntensityAdjustments().getIntensityAdjustments() : null );
+				*/
 			}
 
+			final String title = getTitle( fusion.getSplittingType(), group );
+	
+			if ( !exporter.exportImage(
+					lazy,
+					fusion.getBoundingBox(),
+					fusion.getDownsampling(),
+					fusion.getAnisotropyFactor(),
+					title,
+					group  ) )
+				return false;
+
+			/*
 			if ( fusion.getPixelType() == 1 ) // 16 bit
 			{
 				final double[] minmax = determineInputBitDepth( group, spimData, virtual );
@@ -317,7 +344,7 @@ public class Image_Fusion implements PlugIn
 			{
 				if ( !cacheAndExport( virtual, taskExecutor, new FloatType(), fusion, exporter, group, null ) )
 					return false;
-			}
+			}*/
 		}
 
 		exporter.finish();
@@ -327,6 +354,22 @@ public class Image_Fusion implements PlugIn
 		IOFunctions.println( "(" + new Date(System.currentTimeMillis()) + "): DONE." );
 
 		return true;
+	}
+
+	public static double[] determineInputBitDepth( final Iterable< ? extends ViewDescription > group, final SpimData2 spimData )
+	{
+		SetupImgLoader< ? > loader = spimData.getSequenceDescription().getImgLoader().getSetupImgLoader( group.iterator().next().getViewSetupId() );
+		Object type = loader.getImageType();
+
+		if ( UnsignedByteType.class.isInstance( type ) )
+			return new double[] { 0, 255 };
+		else if ( UnsignedShortType.class.isInstance( type ) )
+			return new double[] { 0, 65535 };
+		else
+		{
+			IOFunctions.println( "WARNING: You are saving a non-8/16 bit input as 16bit, have to manually determine min/max of the fused image." );
+			return null;
+		}
 	}
 
 	public static double[] determineInputBitDepth( final Group< ViewDescription > group, final SpimData2 spimData, final RandomAccessibleInterval< FloatType > virtual )
@@ -347,6 +390,7 @@ public class Image_Fusion implements PlugIn
 		}
 	}
 
+	/*
 	protected static < T extends RealType< T > & NativeType< T > > boolean cacheAndExport(
 			final RandomAccessibleInterval< T > output,
 			final ExecutorService taskExecutor,
@@ -385,11 +429,9 @@ public class Image_Fusion implements PlugIn
 
 		final String title = getTitle( fusion.getSplittingType(), group );
 
-		if ( minmax == null )
-			return exporter.exportImage( processedOutput, fusion.getBoundingBox(), fusion.getDownsampling(), fusion.getAnisotropyFactor(), title, group );
-		else
-			return exporter.exportImage( processedOutput, fusion.getBoundingBox(), fusion.getDownsampling(), fusion.getAnisotropyFactor(), title, group, minmax[ 0 ], minmax[ 1 ] );
+		return exporter.exportImage( processedOutput, fusion.getBoundingBox(), fusion.getDownsampling(), fusion.getAnisotropyFactor(), title, group, minmax[ 0 ], minmax[ 1 ] );
 	}
+	*/
 
 	public static String getTitle( final int splittingType, final Group< ViewDescription > group )
 	{

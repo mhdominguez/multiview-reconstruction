@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -62,18 +62,18 @@ public class Threads
 		{
 			int numBatches = tasks.size() / batchSize + Math.min( 1, tasks.size() % batchSize );
 
-			System.out.println( "numtasks=" + tasks.size() );
-			System.out.println( "numbatches=" + numBatches );
+			//System.out.println( "numtasks=" + tasks.size() );
+			//System.out.println( "numbatches=" + numBatches );
 
 			for ( int i = 0; i < numBatches; ++i )
 			{
-				System.out.println( "batch " + i );
+				//System.out.println( "batch " + i );
 
 				final ArrayList< Callable< T > > list = new ArrayList<>();
 
 				for ( int j = i * batchSize; j < (i+1) * batchSize && j < tasks.size(); ++j )
 				{
-					System.out.println( "adding " + j );
+					//System.out.println( "adding " + j );
 					list.add( tasks.get( j ) );
 				}
 

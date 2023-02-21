@@ -4,7 +4,7 @@ package util;
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -679,15 +679,15 @@ public class FFTConvolution< R extends RealType< R > >
 		}
 	}
 
-	/**
+	/*
 	 * Set the executor service to use.
 	 * 
 	 * When null, a new {@link ExecutorService} is created with the maximum number of available threads,
 	 * and then it is returned (so that it can be shutdown elsewhere to avoid consuming native memory).
 	 * Otherwise, returns the service that was provided as argument.
 	 * 
-	 * @param service
-	 *            - Executor service to use.
+	 * @param service - Executor service to use.
+	 * @return the executor
 	 */
 	public ExecutorService setExecutorService( final ExecutorService service )
 	{

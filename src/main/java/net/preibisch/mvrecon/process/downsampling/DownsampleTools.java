@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -24,38 +24,20 @@ package net.preibisch.mvrecon.process.downsampling;
 
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 
 import mpicbg.spim.data.generic.AbstractSpimData;
 import mpicbg.spim.data.generic.sequence.BasicImgLoader;
-import mpicbg.spim.data.generic.sequence.BasicSetupImgLoader;
 import mpicbg.spim.data.sequence.ImgLoader;
 import mpicbg.spim.data.sequence.MultiResolutionImgLoader;
-import mpicbg.spim.data.sequence.MultiResolutionSetupImgLoader;
 import mpicbg.spim.data.sequence.ViewId;
 import mpicbg.spim.data.sequence.VoxelDimensions;
-import net.imglib2.IterableInterval;
-import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.converter.Converter;
-import net.imglib2.converter.RealTypeConverters;
-import net.imglib2.img.Img;
-import net.imglib2.img.ImgFactory;
-import net.imglib2.img.cell.CellImgFactory;
-import net.imglib2.loops.LoopBuilder;
 import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.type.NativeType;
-import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Pair;
 import net.imglib2.util.Util;
 import net.imglib2.util.ValuePair;
-import net.imglib2.view.IntervalView;
-import net.imglib2.view.Views;
 import net.preibisch.legacy.io.IOFunctions;
-import net.preibisch.mvrecon.fiji.spimdata.imgloaders.AbstractImgLoader;
 import net.preibisch.mvrecon.fiji.spimdata.interestpoints.InterestPoint;
-import util.ImgLib2Tools;
 
 public class DownsampleTools
 {
@@ -124,7 +106,7 @@ public class DownsampleTools
 			// best possible step size in the output image when using original data
 			final float[] sizeMaxResolution = getStepSize( m );
 
-			System.out.println( Util.printCoordinates( sizeMaxResolution ) );
+			//System.out.println( Util.printCoordinates( sizeMaxResolution ) );
 			float acceptedError = 0.02f;
 
 			// assuming that this is the best one
@@ -142,7 +124,7 @@ public class DownsampleTools
 					0.0, factors[ 1 ], 0.0, 0.0,
 					0.0, 0.0, factors[ 2 ], 0.0 );
 	
-				System.out.println( "testing scale: " + s );
+				//System.out.println( "testing scale: " + s );
 	
 				AffineTransform3D model = m.copy();
 				model.concatenate( s );
@@ -165,22 +147,24 @@ public class DownsampleTools
 						bestLevel = level;
 					}
 				}
-				System.out.println( Util.printCoordinates( size ) + " valid: " + isValid + " bestScaling: " + bestScaling  );
+				//System.out.println( Util.printCoordinates( size ) + " valid: " + isValid + " bestScaling: " + bestScaling  );
 			}
 
 			// now done in the more specific code above
 			// concatenate the downsampling transformation model to the affine transform
 			// m.concatenate( mrImgLoader.getSetupImgLoader( viewId.getViewSetupId() ).getMipmapTransforms()[ bestLevel ] );
 
-			System.out.println( "Choosing resolution level: " + mipmapResolutions[ bestLevel ][ 0 ] + " x " + mipmapResolutions[ bestLevel ][ 1 ] + " x " + mipmapResolutions[ bestLevel ][ 2 ] );
+			//System.out.println( "Choosing resolution level s" + bestLevel + ": (" + mipmapResolutions[ bestLevel ][ 0 ] + " x " + mipmapResolutions[ bestLevel ][ 1 ] + " x " + mipmapResolutions[ bestLevel ][ 2 ] + ")" );
 
-			if ( usedDownsampleFactors != null && usedDownsampleFactors.length == mipmapResolutions[ bestLevel ].length )
-				for ( int d = 0; d < usedDownsampleFactors.length; ++d )
+			if ( usedDownsampleFactors != null && usedDownsampleFactors.length >= mipmapResolutions[ bestLevel ].length )
+				for ( int d = 0; d < mipmapResolutions[ bestLevel ].length; ++d )
 					usedDownsampleFactors[ d ] = mipmapResolutions[ bestLevel ][ d ];
 
+			/*
 			IOFunctions.println(
 					"(" + new Date(System.currentTimeMillis()) + "): "
 					+ "Requesting Img from ImgLoader (tp=" + viewId.getTimePointId() + ", setup=" + viewId.getViewSetupId() + "), using level=" + bestLevel + ", [" + mipmapResolutions[ bestLevel ][ 0 ] + " x " + mipmapResolutions[ bestLevel ][ 1 ] + " x " + mipmapResolutions[ bestLevel ][ 2 ] + "]" );
+			*/
 
 			return new ValuePair<>(
 					mrImgLoader.getSetupImgLoader( viewId.getViewSetupId() ).getImage( viewId.getTimePointId(), bestLevel ),
@@ -188,9 +172,11 @@ public class DownsampleTools
 		}
 		else
 		{
+			/*
 			IOFunctions.println(
 					"(" + new Date(System.currentTimeMillis()) + "): "
 					+ "Requesting Img from ImgLoader (tp=" + viewId.getTimePointId() + ", setup=" + viewId.getViewSetupId() + "), using level=" + 0 + ", [1 x 1 x 1]" );
+			*/
 
 			return new ValuePair<>( imgLoader.getSetupImgLoader( viewId.getViewSetupId() ).getImage( viewId.getTimePointId() ), null );
 		}
@@ -284,6 +270,7 @@ public class DownsampleTools
 		
 		return downSamplingFactors;
 	}
+
 	public static void correctForDownsampling( final List< InterestPoint > ips, final AffineTransform3D t )
 	{
 		IOFunctions.println("(" + new Date(System.currentTimeMillis()) + "): Correcting coordinates for downsampling using AffineTransform: " + t );
@@ -326,44 +313,6 @@ public class DownsampleTools
 			exp2 = Math.pow( 2, Math.ceil( log2ratio ) );
 
 		return (int)Math.round( exp2 );
-	}
-
-	public static RandomAccessibleInterval< FloatType > openAtLowestLevelFloat(
-			final ImgLoader imgLoader,
-			final ViewId view )
-	{
-		return openAtLowestLevelFloat( imgLoader, view, null );
-	}
-
-	public static RandomAccessibleInterval< FloatType > openAtLowestLevelFloat(
-			final ImgLoader imgLoader,
-			final ViewId view,
-			final AffineTransform3D t )
-	{
-		final RandomAccessibleInterval< FloatType > input;
-
-		if ( MultiResolutionImgLoader.class.isInstance( imgLoader ) )
-		{
-			final MultiResolutionImgLoader mrImgLoader = ( MultiResolutionImgLoader ) imgLoader;
-			final double[][] mipmapResolutions = mrImgLoader.getSetupImgLoader( view.getViewSetupId() ).getMipmapResolutions();
-			final int bestLevel = findLowestResolutionLevel( mrImgLoader, view );
-
-			IOFunctions.println( "(" + new Date(System.currentTimeMillis()) + "): Loading level " + Util.printCoordinates( mipmapResolutions[ bestLevel ] ) );
-
-			input = mrImgLoader.getSetupImgLoader( view.getViewSetupId() ).getFloatImage( view.getTimePointId(), bestLevel, false );
-			if ( t != null )
-				t.set( mrImgLoader.getSetupImgLoader( view.getViewSetupId() ).getMipmapTransforms()[ bestLevel ] );
-		}
-		else
-		{
-			IOFunctions.println( "(" + new Date(System.currentTimeMillis()) + "): Loading full-resolution images :( " );
-
-			input = imgLoader.getSetupImgLoader( view.getViewSetupId() ).getFloatImage( view.getTimePointId(), false );
-			if ( t != null )
-				t.identity();
-		}
-
-		return input;
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -431,6 +380,48 @@ public class DownsampleTools
 	}
 
 	/**
+	 * Returns the mipmap transform if you were to open that ViewId with this ImgLoader at the specified downsample factors
+	 * 
+	 * @param imgLoader the imgloader
+	 * @param vd the view id
+	 * @param downsampleFactors - specify which downsampling in each dimension (e.g. 1,2,4,8 )
+	 * @return the mipmap transform
+	 */
+	public static AffineTransform3D getMipMapTransform(
+			final BasicImgLoader imgLoader,
+			final ViewId vd,
+			final long[] downsampleFactors )
+	{
+		final AffineTransform3D mmt = new AffineTransform3D();
+
+		openAndDownsample( imgLoader, vd, mmt, downsampleFactors, true );
+
+		return mmt;
+	}
+
+	/**
+	 * Opens the image at a specified downsampling level (e.g. 4,4,1). It finds the closest available mipmap level and then downsamples
+	 * to reach the target level
+	 *
+	 * @param imgLoader the imgloader
+	 * @param vd the view id
+	 * @param downsampleFactors - specify which downsampling in each dimension (e.g. 1,2,4,8 )
+	 * @return opened image and the mipmap transform
+	 */
+	@SuppressWarnings({ "rawtypes" })
+	public static Pair<RandomAccessibleInterval, AffineTransform3D> openAndDownsample(
+			final BasicImgLoader imgLoader,
+			final ViewId vd,
+			final long[] downsampleFactors )
+	{
+		final AffineTransform3D mipMapTransform = new AffineTransform3D();
+
+		final RandomAccessibleInterval img = openAndDownsample(imgLoader, vd, mipMapTransform, downsampleFactors, false );
+
+		return new ValuePair<RandomAccessibleInterval, AffineTransform3D>( img, mipMapTransform );
+	}
+
+	/**
 	 * Opens the image at a specified downsampling level (e.g. 4,4,1). It finds the closest available mipmap level and then downsamples
 	 * to reach the target level
 	 *
@@ -439,23 +430,21 @@ public class DownsampleTools
 	 * @param mipMapTransform - will be filled if downsampling is performed, otherwise identity transform
 	 * @param downsampleFactors - specify which downsampling in each dimension (e.g. 1,2,4,8 )
 	 * @param transformOnly - if true does not open any images but only provides the mipMapTransform (METHOD WILL RETURN NULL!)
-	 * @param openAsFloat - call imgLoader.getFloatImage() instead of imgLoader.getImage()
 	 * @return opened image
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static RandomAccessibleInterval openAndDownsample(
+	private static RandomAccessibleInterval openAndDownsample(
 			final BasicImgLoader imgLoader,
 			final ViewId vd,
 			final AffineTransform3D mipMapTransform,
 			long[] downsampleFactors,
-			final boolean transformOnly,
-			final boolean openAsFloat ) // only for ImgLib1 legacy code
+			final boolean transformOnly ) // only for ImgLib1 legacy code
 	{
 
-		if ( !transformOnly )
-			IOFunctions.println(
-				"(" + new Date(System.currentTimeMillis()) + "): "
-				+ "Requesting Img from ImgLoader (tp=" + vd.getTimePointId() + ", setup=" + vd.getViewSetupId() + "), downsampling: " + Util.printCoordinates( downsampleFactors ) );
+		//if ( !transformOnly )
+		//	IOFunctions.println(
+		//		"(" + new Date(System.currentTimeMillis()) + "): "
+		//		+ "Requesting Img from ImgLoader (tp=" + vd.getTimePointId() + ", setup=" + vd.getViewSetupId() + "), downsampling: " + Util.printCoordinates( downsampleFactors ) );
 
 		long dsx = downsampleFactors[0];
 		long dsy = downsampleFactors[1];
@@ -496,14 +485,14 @@ public class DownsampleTools
 
 			if ( !transformOnly )
 			{
-				IOFunctions.println(
-						"(" + new Date(System.currentTimeMillis()) + "): " +
-						"Using precomputed Multiresolution Images [" + fx + "x" + fy + "x" + fz + "], " +
-						"Remaining downsampling [" + dsx + "x" + dsy + "x" + dsz + "]" );
+				//IOFunctions.println(
+				//		"(" + new Date(System.currentTimeMillis()) + "): " +
+				//		"Using precomputed Multiresolution Images [" + fx + "x" + fy + "x" + fz + "], " +
+				//		"Remaining downsampling [" + dsx + "x" + dsy + "x" + dsz + "]" );
 
-				if ( openAsFloat )
-					input = ImgLib2Tools.convertVirtual( (RandomAccessibleInterval)mrImgLoader.getSetupImgLoader( vd.getViewSetupId() ).getImage( vd.getTimePointId(), bestLevel ) );
-				else
+				//if ( openAsFloat )
+				//	input = ImgLib2Tools.convertVirtual( (RandomAccessibleInterval)mrImgLoader.getSetupImgLoader( vd.getViewSetupId() ).getImage( vd.getTimePointId(), bestLevel ) );
+				//else
 					input = mrImgLoader.getSetupImgLoader( vd.getViewSetupId() ).getImage( vd.getTimePointId(), bestLevel );
 			}
 		}
@@ -511,15 +500,15 @@ public class DownsampleTools
 		{
 			if ( !transformOnly )
 			{
-				IOFunctions.println(
-						"(" + new Date(System.currentTimeMillis()) + "): " +
-						"Using precomputed Multiresolution Images [1x1x1], " +
-						"Remaining downsampling [" + dsx + "x" + dsy + "x" + dsz + "]" );
+				//IOFunctions.println(
+				//		"(" + new Date(System.currentTimeMillis()) + "): " +
+				//		"Using precomputed Multiresolution Images [1x1x1], " +
+				//		"Remaining downsampling [" + dsx + "x" + dsy + "x" + dsz + "]" );
 
 				// we only need to do the complete opening when we do not perform additional downsampling below
-				if ( openAsFloat )
-					input = ImgLib2Tools.convertVirtual( (RandomAccessibleInterval)imgLoader.getSetupImgLoader( vd.getViewSetupId() ).getImage( vd.getTimePointId() ) );
-				else
+				//if ( openAsFloat )
+				//	input = ImgLib2Tools.convertVirtual( (RandomAccessibleInterval)imgLoader.getSetupImgLoader( vd.getViewSetupId() ).getImage( vd.getTimePointId() ) );
+				//else
 					input = imgLoader.getSetupImgLoader( vd.getViewSetupId() ).getImage( vd.getTimePointId() );
 			}
 
@@ -557,47 +546,6 @@ public class DownsampleTools
 		}
 
 		return input;
-	}
-
-	// TODO: Remove when RealTypeConvertes.copyFromTo has multithreading support
-	public static void copyFromToMultithreaded(
-			final RandomAccessible< ? extends RealType< ? > > source,
-			final RandomAccessibleInterval< ? extends RealType< ? > > destination )
-	{
-		final IntervalView< ? extends RealType< ? > > sourceInterval = Views.interval( source, destination );
-		final RealType< ? > s = net.imglib2.util.Util.getTypeFromInterval( sourceInterval );
-		final RealType< ? > d = net.imglib2.util.Util.getTypeFromInterval( destination );
-		final Converter< RealType< ? >, RealType< ? > > copy = RealTypeConverters.getConverter( s, d );
-		LoopBuilder.setImages( sourceInterval, destination ).multiThreaded().forEachPixel( copy::convert );
-	}
-
-	private static float[] getMinMax( final IterableInterval< FloatType > img )
-	{
-		float currentMax = img.firstElement().get();
-		float currentMin = currentMax;
-		for ( final FloatType t : img )
-		{
-			final float f = t.get();
-			if ( f > currentMax )
-				currentMax = f;
-			else if ( f < currentMin )
-				currentMin = f;
-		}
-
-		return new float[] { currentMin, currentMax };
-	}
-
-	/**
-	 * normalize img to 0...1 in place
-	 */
-	public static void normalize( final IterableInterval< FloatType > img )
-	{
-		final float[] minmax = getMinMax( img );
-		final float min = minmax[ 0 ];
-		final float max = minmax[ 1 ];
-		final float scale = ( float ) ( 1.0 / ( max - min ) );
-		for ( final FloatType t : img )
-			t.set( ( t.get() - min ) * scale );
 	}
 
 	private static final boolean contains( final int i, final int[] values )

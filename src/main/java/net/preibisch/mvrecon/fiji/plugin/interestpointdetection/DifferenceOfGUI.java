@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -41,9 +41,13 @@ import mpicbg.spim.data.sequence.Tile;
 import mpicbg.spim.data.sequence.ViewDescription;
 import mpicbg.spim.data.sequence.ViewId;
 import net.imglib2.Dimensions;
+import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.converter.Converters;
+import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.img.imageplus.ImagePlusImgFactory;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Pair;
 import net.imglib2.util.Util;
@@ -146,7 +150,7 @@ public abstract class DifferenceOfGUI extends InterestPointDetectionGUI
 				int count = 0;
 				for ( final ViewId view : viewIdsToProcess )
 				{
-					final double[] minmax = FusionTools.minMaxApprox( DownsampleTools.openAtLowestLevel( imgLoader, view ) );
+					final double[] minmax = FusionTools.minMaxApprox1( DownsampleTools.openAtLowestLevel( imgLoader, view ) );
 					min = Math.min( min, minmax[ 0 ] );
 					max = Math.max( max, minmax[ 1 ] );
 
@@ -472,20 +476,19 @@ public abstract class DifferenceOfGUI extends InterestPointDetectionGUI
 		IOFunctions.println( "(" + new Date( System.currentTimeMillis() ) + "): Opening and downsampling ... " );
 
 		@SuppressWarnings("unchecked")
-		RandomAccessibleInterval< FloatType > img = DownsampleTools.openAndDownsample(
+		RandomAccessibleInterval<RealType<?>> imgGeneric = DownsampleTools.openAndDownsample(
 			spimData.getSequenceDescription().getImgLoader(),
 			viewDescription,
-			null,
-			new long[] { downsampleXY, downsampleXY, downsampleZ },
-			false,  //transformOnly
-			true    //openAsFloat
-			);
+			new long[] { downsampleXY, downsampleXY, downsampleZ } ).getA();
 
-		if ( img == null )
+		if ( imgGeneric == null )
 		{
 			IOFunctions.println( "View not found: " + viewDescription );
 			return null;
 		}
+
+		final RandomAccessibleInterval< FloatType > img =
+				Converters.convertRAI( imgGeneric, (i,o) -> o.set( i.getRealFloat() ), new FloatType() );
 
 		// TODO: in the future when the interactive DoG does not copy & normalize anyways
 		//IOFunctions.println( "(" + new Date( System.currentTimeMillis() ) + "): Caching input image ... "  );
@@ -496,13 +499,17 @@ public abstract class DifferenceOfGUI extends InterestPointDetectionGUI
 			IOFunctions.println( "(" + new Date( System.currentTimeMillis() ) + "): Determining same Min & Max for all views... " );
 			preprocess();
 		}
+		else
+		{
+			final double[] minmax = FusionTools.minMaxApprox1( img );
+
+			minIntensity = minmax[ 0 ];
+			maxIntensity = minmax[ 1 ];
+		}
 
 		IOFunctions.println( "(" + new Date( System.currentTimeMillis() ) + "): Wrapping ImagePlus around input image ... " );
 
-		if ( Double.isNaN( minIntensity ) || Double.isNaN( maxIntensity ) )
-			return DisplayImage.getImagePlusInstance( img, false, "tp: " + viewDescription.getTimePoint().getName() + " viewSetup: " + viewDescription.getViewSetupId(), Double.NaN, Double.NaN );
-		else
-			return DisplayImage.getImagePlusInstance( img, false, "tp: " + viewDescription.getTimePoint().getName() + " viewSetup: " + viewDescription.getViewSetupId(), minIntensity, maxIntensity );
+		return DisplayImage.getImagePlusInstance( img, false, "tp: " + viewDescription.getTimePoint().getName() + " viewSetup: " + viewDescription.getViewSetupId(), minIntensity, maxIntensity );
 	}
 
 	protected ImagePlus getGroupedImagePlusForInteractive( final String dialogHeader )
@@ -664,21 +671,30 @@ public abstract class DifferenceOfGUI extends InterestPointDetectionGUI
 			IOFunctions.println( "Cropped Effective boundingbox: " + Util.printInterval( TransformVirtual.scaleBoundingBox( bb, 1.0 / ds ) ) + " estimated size=" + megabytes + " MB" );
 		}
 
+		// adjust bounding box
+		final Interval bbDS = FusionTools.createDownsampledBoundingBox( bb, ds ).getA();
+
+		// adjust registrations
+		final HashMap< ViewId, AffineTransform3D > registrationsAdjusted =
+				TransformVirtual.adjustAllTransforms(
+						registrations,
+						Double.NaN,
+						ds );
+
 		RandomAccessibleInterval< FloatType > img = FusionTools.fuseVirtual(
 				imgLoader,
-				registrations,
+				registrationsAdjusted,
 				viewDescriptions,
 				group.getViews(),
 				DisplayFusedImagesPopup.defaultUseBlending,
 				false,
 				DisplayFusedImagesPopup.defaultInterpolation,
-				bb,
-				ds,
-				null ).getA();
+				bbDS,
+				null );
 
 		IOFunctions.println( "(" + new Date( System.currentTimeMillis() ) + "): Fusing temporary image ... " );
 
-		img = FusionTools.copyImg( img, new ImagePlusImgFactory< FloatType >(), new FloatType(), null, true );
+		img = FusionTools.copyImg( img, new ImagePlusImgFactory< FloatType >( new FloatType() ), new FloatType(), null, true );
 
 		// we set the min & max intensity for all individual views
 		if ( Double.isNaN( minIntensity ) || Double.isNaN( maxIntensity ) )

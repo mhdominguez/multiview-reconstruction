@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -66,26 +66,26 @@ public class StackListLOCI extends StackList
 	@Override
 	public String getExtendedDescription()
 	{
-		return  "This dataset definition supports series of image stacks all present in the same\n" +  
-				 "folder. The filename of each file is defined by timepoint, angle, channel and\n" +  
-				 "illumination direction or multiple timepoints and channels per file.\n" + 
-				 "The image stacks can be stored in any fileformat that LOCI Bioformats is able\n" + 
-				 "to import, for example TIFF, LSM, CZI, ...\n" + 
-				 "\n" + 
+		return  "This dataset definition supports series of image stacks all present in the same\n" +
+				 "folder. The filename of each file is defined by timepoint, angle, channel and\n" +
+				 "illumination direction or multiple timepoints and channels per file.\n" +
+				 "The image stacks can be stored in any fileformat that LOCI Bioformats is able\n" +
+				 "to import, for example TIFF, LSM, CZI, ...\n" +
+				 "\n" +
 				 "The filenames of the 3d image stacks could be for example:\n" +
-				 "\n" + 
-				 "spim_TL1_Ill1_Angle0.tif ... spim_TL100_Ill2_Angle315.tif [2 channels each]\n" + 
+				 "\n" +
+				 "spim_TL1_Ill1_Angle0.tif ... spim_TL100_Ill2_Angle315.tif [2 channels each]\n" +
 				 "data_TP01_Angle000.lsm ... data_TP70_Angle180.lsm\n" +
 				 "Angle0.ome.tiff ... Angle288.ome.tiff\n" +
 				 "\n" +
 				 "Note: this definition can be used for OpenSPIM data.";
 	}
 
-	
+
 	@Override
 	protected double[] loadTileLocationFromMetaData(File file, int seriesOffset) {
-		IOFunctions.println( "Loading tile localtion for: " + file.getAbsolutePath() );
-		
+		IOFunctions.println( "Loading tile location for: " + file.getAbsolutePath() );
+
 		if ( !file.exists() )
 		{
 			IOFunctions.println( "File '" + file + "' does not exist. Stopping." );
@@ -93,14 +93,18 @@ public class StackListLOCI extends StackList
 		}
 
 		final double[] loc = LegacyStackImgLoaderLOCI.loadTileLocation( file, seriesOffset );
-		return loc;
+
+		if ( loc == null )
+			return new double[3];
+		else
+			return loc;
 	};
-	
+
 	@Override
 	protected Calibration loadCalibration( final File file )
 	{
 		IOFunctions.println( "Loading calibration for: " + file.getAbsolutePath() );
-				
+
 		if ( !file.exists() )
 		{
 			IOFunctions.println( "File '" + file + "' does not exist. Stopping." );
@@ -111,7 +115,7 @@ public class StackListLOCI extends StackList
 
 		if ( cal == null )
 			return null;
-		
+
 		final double calX = cal.getCalX();
 		final double calY = cal.getCalY();
 		final double calZ = cal.getCalZ();
@@ -121,7 +125,7 @@ public class StackListLOCI extends StackList
 
 	@Override
 	protected boolean canLoadTileLocationFromMeta() {return true;};
-	
+
 	@Override
 	protected boolean supportsMultipleTimepointsPerFile() { return true; }
 
@@ -133,10 +137,10 @@ public class StackListLOCI extends StackList
 
 	@Override
 	protected boolean supportsMultipleIlluminationsPerFile() { return false; }
-	
+
 	@Override
 	protected boolean supportsMultipleTilesPerFile() { return true; }
-	
+
 	@Override
 	protected int getDefaultMultipleAngles() { return defaultAngleChoice; }
 
@@ -148,7 +152,7 @@ public class StackListLOCI extends StackList
 
 	@Override
 	protected int getDefaultMultipleIlluminations() { return defaultIlluminationChoice; }
-	
+
 	@Override
 	protected int getDefaultMultipleTiles() { return defaultTileChoice; }
 
@@ -163,7 +167,7 @@ public class StackListLOCI extends StackList
 
 	@Override
 	protected void setDefaultMultipleIlluminations( final int i ) { defaultIlluminationChoice = i; }
-	
+
 	@Override
 	protected void setDefaultMultipleTiles( final int ti ) { defaultTileChoice = ti; }
 

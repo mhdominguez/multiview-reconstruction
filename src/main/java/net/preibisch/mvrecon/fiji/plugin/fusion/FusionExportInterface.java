@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -23,11 +23,14 @@
 package net.preibisch.mvrecon.fiji.plugin.fusion;
 
 import java.util.Collection;
+import java.util.List;
 
 import mpicbg.spim.data.SpimData;
+import mpicbg.spim.data.sequence.ViewDescription;
 import mpicbg.spim.data.sequence.ViewId;
 import net.imglib2.Interval;
 import net.preibisch.mvrecon.process.export.ImgExport;
+import net.preibisch.mvrecon.process.interestpointregistration.pairwise.constellation.grouping.Group;
 
 public interface FusionExportInterface
 {
@@ -68,4 +71,6 @@ public interface FusionExportInterface
 	 * @return - creates a new instance of the exporter object
 	 */
 	public ImgExport getNewExporterInstance();
+
+	public List<Group<ViewDescription>> getFusionGroups();
 }

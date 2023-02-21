@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -41,8 +41,8 @@ public class ManageFusionDialogListeners
 {
 	final GenericDialog gd;
 	final TextField downsampleField;
-	final Choice boundingBoxChoice, pixelTypeChoice, cachingChoice, nonRigidChoice, splitChoice, contentbasedCheckbox;
-	final Checkbox anisoCheckbox;
+	final Choice boundingBoxChoice, pixelTypeChoice, /*cachingChoice, */nonRigidChoice, splitChoice, contentbasedCheckbox, rotationChoice;
+	//final Checkbox anisoCheckbox;
 	final Label label1;
 	final Label label2;
 	final FusionGUI fusion;
@@ -55,10 +55,10 @@ public class ManageFusionDialogListeners
 			final Choice boundingBoxChoice,
 			final TextField downsampleField,
 			final Choice pixelTypeChoice,
-			final Choice cachingChoice,
+			//final Choice cachingChoice,
 			final Choice nonRigidChoice,
 			final Choice contentbasedCheckbox,
-			final Checkbox anisoCheckbox,
+			//final Checkbox anisoCheckbox,
 			final TextField downsampleZField,
 			final Choice splitChoice,
 			final Label label1,
@@ -69,7 +69,7 @@ public class ManageFusionDialogListeners
 		this.boundingBoxChoice = boundingBoxChoice;
 		this.downsampleField = downsampleField;
 		this.pixelTypeChoice = pixelTypeChoice;
-		this.cachingChoice = cachingChoice;
+		//this.cachingChoice = cachingChoice;
 		this.nonRigidChoice = nonRigidChoice;
 		this.contentbasedCheckbox = contentbasedCheckbox;
 		this.anisoCheckbox = anisoCheckbox;
@@ -88,8 +88,8 @@ public class ManageFusionDialogListeners
 		this.pixelTypeChoice.addItemListener( new ItemListener() { @Override
 			public void itemStateChanged(ItemEvent e) { update(); } });
 
-		this.cachingChoice.addItemListener( new ItemListener() { @Override
-			public void itemStateChanged(ItemEvent e) { update(); } });
+		//this.cachingChoice.addItemListener( new ItemListener() { @Override
+		//	public void itemStateChanged(ItemEvent e) { update(); } });
 
 		if ( this.nonRigidChoice != null )
 			this.nonRigidChoice.addItemListener( new ItemListener() { @Override
@@ -116,10 +116,11 @@ public class ManageFusionDialogListeners
 		fusion.boundingBox = boundingBoxChoice.getSelectedIndex();
 		fusion.downsampling = Double.valueOf( downsampleField.getText() );
 		fusion.pixelType = pixelTypeChoice.getSelectedIndex();
-		fusion.cacheType = cachingChoice.getSelectedIndex();
+
+		//fusion.cacheType = cachingChoice.getSelectedIndex();
 		fusion.useContentBased = contentbasedCheckbox.getSelectedIndex();
 		fusion.splittingType = splitChoice.getSelectedIndex();
-		if ( anisoCheckbox != null )
+		/*if ( anisoCheckbox != null )
 		{
 			fusion.preserveAnisotropy = anisoCheckbox.getState();
 			
@@ -128,17 +129,25 @@ public class ManageFusionDialogListeners
 			else
 				this.anisoF = 1.0;
 		}
-		else
+		else*/
+		this.anisoF = Double.valueOf( downsampleZField.getText() );
+		if ( this.anisoF > 0.98 && this.anisoF < 1.02 )
 		{
 			this.anisoF = 1.0;
 			fusion.preserveAnisotropy = false;
+		}
+		else
+		{
+			fusion.preserveAnisotropy = true;
 		}
 
 		final BoundingBox bb = fusion.allBoxes.get( fusion.boundingBox );
 		final long numPixels = Math.round( FusionTools.numPixels( bb, fusion.downsampling ) / anisoF );
 
 		final int bytePerPixel;
-		if ( fusion.pixelType == 1 )
+		if ( fusion.pixelType == 2 )
+			bytePerPixel = 1;
+		else if ( fusion.pixelType == 1 )
 			bytePerPixel = 2;
 		else
 			bytePerPixel = 4;
@@ -160,7 +169,7 @@ public class ManageFusionDialogListeners
 		label2.setText( "Dimensions: " + 
 				Math.round( (max[ 0 ] - min[ 0 ] + 1)/fusion.downsampling ) + " x " + 
 				Math.round( (max[ 1 ] - min[ 1 ] + 1)/fusion.downsampling ) + " x " + 
-				Math.round( (max[ 2 ] - min[ 2 ] + 1)/(fusion.downsampling ) ) + " pixels @ " + FusionGUI.pixelTypes[ fusion.pixelType ] );
+				Math.max( 1, Math.round( (max[ 2 ] - min[ 2 ] + 1)/(fusion.downsampling ) ) ) + " pixels @ " + FusionGUI.pixelTypes1[ fusion.pixelType ] );
 	}
 
 	public long totalRAM( long fusedSizeMB, final int bytePerPixel )
@@ -197,9 +206,9 @@ public class ManageFusionDialogListeners
 				processingMB = ( maxNumPixelsInput / Math.round( inputDownSampling * 1024*1024 ) ) * 4;
 		}
 
-		if ( fusion.cacheType == 0 ) // Virtual
+		/*if ( fusion.cacheType == 0 ) // Virtual
 			fusedSizeMB /= Math.max( 1, Math.round( Math.pow( fusedSizeMB, 0.3 ) ) );
-		else if ( fusion.cacheType == 1 ) // Cached
+		else if ( fusion.cacheType == 1 ) // Cached*/
 			fusedSizeMB = 2 * Math.round( fusedSizeMB / Math.max( 1, Math.pow( fusedSizeMB, 0.3 ) ) );
 
 		if ( nonRigidChoice != null && nonRigidChoice.getSelectedIndex() < nonRigidChoice.getItemCount() - 1 )

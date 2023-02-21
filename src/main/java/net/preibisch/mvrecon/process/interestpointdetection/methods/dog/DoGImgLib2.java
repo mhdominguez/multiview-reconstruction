@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -79,10 +79,10 @@ import net.preibisch.mvrecon.process.cuda.CUDASeparableConvolutionFunctions.OutO
 import net.preibisch.mvrecon.process.fusion.FusionTools;
 import net.preibisch.mvrecon.process.fusion.ImagePortion;
 import net.preibisch.mvrecon.process.interestpointdetection.Localization;
-import net.preibisch.mvrecon.process.interestpointdetection.methods.lazygauss.Lazy;
 import net.preibisch.mvrecon.process.interestpointdetection.methods.lazygauss.LazyGauss;
 import net.preibisch.mvrecon.process.interestpointdetection.methods.lazygauss.LazyWeightedGauss;
 import util.ImgLib2Tools;
+import util.Lazy;
 
 public class DoGImgLib2
 {
@@ -180,7 +180,7 @@ public class DoGImgLib2
 		if ( localization == 0 )
 			minInitialPeakValue = minPeakValue;
 		else
-			minInitialPeakValue = (float)threshold/10.0f;
+			minInitialPeakValue = (float)threshold/3.0f;
 
 		final float min, max;
 
@@ -255,7 +255,7 @@ public class DoGImgLib2
 		}
 		else
 		{
-			maskFloat = ImgLib2Tools.convertVirtual( mask );
+			maskFloat = Converters.convertRAI( mask, (i,o) -> o.set( i.getRealFloat() ), new FloatType());//ImgLib2Tools.convertVirtual( mask );
 
 			gauss1 = LazyWeightedGauss.init( Views.extendMirrorSingle( inputFloat ), Views.extendZero( maskFloat ), new FinalInterval( inputFloat ), new FloatType(), sigma1, blockSize );
 			gauss2 = LazyWeightedGauss.init( Views.extendMirrorSingle( inputFloat ), Views.extendZero( maskFloat ), new FinalInterval( inputFloat ), new FloatType(), sigma2, blockSize );

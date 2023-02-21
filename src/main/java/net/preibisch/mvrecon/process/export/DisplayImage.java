@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -24,8 +24,11 @@ package net.preibisch.mvrecon.process.export;
 
 import java.util.Date;
 import java.util.concurrent.ExecutorService;
+import java.util.stream.Collectors;
 
+import fiji.util.gui.GenericDialogPlus;
 import ij.ImagePlus;
+import ij.gui.GenericDialog;
 import mpicbg.spim.data.sequence.ViewId;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
@@ -36,6 +39,7 @@ import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.preibisch.legacy.io.IOFunctions;
 import net.preibisch.mvrecon.fiji.plugin.fusion.FusionExportInterface;
+import net.preibisch.mvrecon.fiji.plugin.util.GUIHelper;
 import net.preibisch.mvrecon.process.deconvolution.DeconViews;
 import net.preibisch.mvrecon.process.fusion.FusionTools;
 import net.preibisch.mvrecon.process.interestpointregistration.pairwise.constellation.grouping.Group;
@@ -45,10 +49,26 @@ public class DisplayImage implements ImgExport, Calibrateable
 	// TODO: this is ugly, but otherwise the service is shutdown while the ImageJVirtualStack is still displayed and crashes when scrolling through the stack
 	final static ExecutorService service = DeconViews.createExecutorService();
 
-	final boolean virtualDisplay;
+	final String[] choiceText = new String[] { "cached (immediate, less memory, slower)", "precomputed (fast, complete copy in memory before display)" };
 
+	public static int defaultChoice = 1;
+	public static int defaultBlocksizeVirtualX = 256;
+	public static int defaultBlocksizeVirtualY = 256;
+	public static int defaultBlocksizeVirtualZ = 1;
+	public static int defaultBlocksizePrecomputeX = 128;
+	public static int defaultBlocksizePrecomputeY = 128;
+	public static int defaultBlocksizePrecomputeZ = 64;
+	public static int defaultMinIntensity = 0;
+	public static int defaultMaxIntensity = 255;
+	
+	boolean virtualDisplay;
 	String unit = "px";
 	double cal = 1.0;
+	int bsX = defaultBlocksizeVirtualX;
+	int bsY = defaultBlocksizeVirtualY;
+	int bsZ = defaultBlocksizeVirtualZ;
+	int minIntensity = defaultMinIntensity;
+	int maxIntensity = defaultMaxIntensity;
 
 	public DisplayImage() { this( true ); }
 	public DisplayImage( final boolean virtualDisplay ) { this.virtualDisplay = virtualDisplay; }
@@ -72,29 +92,16 @@ public class DisplayImage implements ImgExport, Calibrateable
 			final String title,
 			final Group< ? extends ViewId > fusionGroup )
 	{
-		return exportImage( img, bb, downsampling, anisoF, title, fusionGroup, Double.NaN, Double.NaN );
-	}
-
-	public < T extends RealType< T > & NativeType< T > > boolean exportImage(
-			final RandomAccessibleInterval<T> img,
-			final Interval bb,
-			final double downsampling,
-			final double anisoF,
-			final String title,
-			final Group< ? extends ViewId > fusionGroup,
-			final double min,
-			final double max )
-	{
 		// do nothing in case the image is null
 		if ( img == null )
 			return false;
 
 		// determine min and max
-		final double[] minmax = getFusionMinMax( img, min, max );
+		//final double[] minmax = FusionTools.minMaxApprox( null );//getFusionMinMax( img, min, max );
 
-		IOFunctions.println( "(" + new Date( System.currentTimeMillis() ) + "): Approximate min=" + minmax[ 0 ] + ", max=" + minmax[ 1 ] );
+		IOFunctions.println( "(" + new Date( System.currentTimeMillis() ) + "): Display range min=" + minIntensity + ", max=" + maxIntensity );
 
-		final ImagePlus imp = getImagePlusInstance( img, virtualDisplay, title, minmax[ 0 ], minmax[ 1 ] );
+		final ImagePlus imp = getImagePlusInstance( img, virtualDisplay, title, minIntensity, maxIntensity );
 
 		setCalibration( imp, bb, downsampling, anisoF, cal, unit );
 
@@ -130,16 +137,6 @@ public class DisplayImage implements ImgExport, Calibrateable
 
 		if ( Double.isNaN( min ) || Double.isNaN( max ) )
 			minmax = FusionTools.minMaxApprox( img );
-		else if ( min == 0 && max == 65535 )
-		{
-			// 16 bit input was assumed, little hack in case it was 8-bit
-			minmax = FusionTools.minMaxApprox( img );
-			if ( minmax[ 1 ] <= 255 )
-			{
-				minmax[ 0 ] = 0;
-				minmax[ 1 ] = 255;
-			}
-		}
 		else
 			minmax = new double[]{ (float)min, (float)max };
 
@@ -156,7 +153,6 @@ public class DisplayImage implements ImgExport, Calibrateable
 		return getImagePlusInstance( img, virtualDisplay, title, min, max, service );
 	}
 
-	@SuppressWarnings("unchecked")
 	public static < T extends RealType< T > & NativeType< T > > ImagePlus getImagePlusInstance(
 			final RandomAccessibleInterval< T > img,
 			final boolean virtualDisplay,
@@ -188,7 +184,92 @@ public class DisplayImage implements ImgExport, Calibrateable
 	}
 
 	@Override
-	public boolean queryParameters( final FusionExportInterface fusion ) { return true; }
+	public boolean queryParameters( final FusionExportInterface fusion )
+	{
+		final boolean is2d =
+				FusionTools.is2d( fusion.getViews().stream().map( v -> fusion.getSpimData().getSequenceDescription().getViewDescriptions().get( v ) ).collect( Collectors.toList() ) );
+					
+		final GenericDialogPlus gd = new GenericDialogPlus( "Display fused image as ImageJ stack" );
+
+		gd.addChoice( "Display image", choiceText, choiceText[ defaultChoice ] );
+
+		gd.addMessage( "Initial display range:", GUIHelper.smallStatusFont, GUIHelper.neutral );
+		gd.addNumericField( "min_intensity", defaultMinIntensity, 0);
+		gd.addNumericField( "max_intensity", defaultMaxIntensity, 0);
+
+		gd.addCheckbox( "Show_advanced_block_size_options (in a new dialog, can optimize processing time)", ExportN5API.defaultAdvancedBlockSize );
+
+		if ( is2d )
+			gd.addMessage( "Note: we have a 2d-dataset, choose 1 in z.", GUIHelper.smallStatusFont, GUIHelper.neutral );
+
+		gd.showDialog();
+		if ( gd.wasCanceled() )
+			return false;
+
+		if ( ( defaultChoice = gd.getNextChoiceIndex() ) == 0 )
+			virtualDisplay = true;
+		else
+			virtualDisplay = false;
+
+		minIntensity = defaultMinIntensity = (int)Math.round( gd.getNextNumber() );
+		maxIntensity = defaultMaxIntensity = (int)Math.round( gd.getNextNumber() );
+
+		if ( ExportN5API.defaultAdvancedBlockSize  = gd.getNextBoolean() )
+		{
+			final GenericDialog gd2 = new GenericDialog( "Compute block size options" );
+			
+			if ( virtualDisplay )
+			{
+				gd2.addMessage( "Block size of lazy processing is optimized for multi-threaded viewing:", GUIHelper.smallStatusFont, GUIHelper.neutral );
+				gd2.addNumericField( "block_size_x", defaultBlocksizeVirtualX, 0);
+				gd2.addNumericField( "block_size_y", defaultBlocksizeVirtualY, 0);
+				gd2.addNumericField( "block_size_z", defaultBlocksizeVirtualZ, 0);
+			}
+			else
+			{
+				gd2.addMessage( "Block size of lazy processing is optimized for precomputing the image:", GUIHelper.smallStatusFont, GUIHelper.neutral );
+				gd2.addNumericField( "block_size_x", defaultBlocksizePrecomputeX, 0);
+				gd2.addNumericField( "block_size_y", defaultBlocksizePrecomputeY, 0);
+				gd2.addNumericField( "block_size_z", defaultBlocksizePrecomputeZ, 0);
+			}
+
+			gd2.showDialog();
+			if ( gd2.wasCanceled() )
+				return false;
+
+			if ( virtualDisplay )
+			{
+				bsX = defaultBlocksizeVirtualX = (int)Math.round( gd.getNextNumber() );
+				bsY = defaultBlocksizeVirtualY = (int)Math.round( gd.getNextNumber() );
+				bsZ = defaultBlocksizeVirtualZ = (int)Math.round( gd.getNextNumber() );
+			}
+			else
+			{
+				bsX = defaultBlocksizePrecomputeX = (int)Math.round( gd.getNextNumber() );
+				bsY = defaultBlocksizePrecomputeY = (int)Math.round( gd.getNextNumber() );
+				bsZ = defaultBlocksizePrecomputeZ = (int)Math.round( gd.getNextNumber() );
+			}
+		}
+		else
+		{
+			if ( virtualDisplay )
+			{
+				bsX = defaultBlocksizeVirtualX;
+				bsY = defaultBlocksizeVirtualY;
+				bsZ = defaultBlocksizeVirtualZ;
+			}
+			else
+			{
+				bsX = defaultBlocksizePrecomputeX;
+				bsY = defaultBlocksizePrecomputeY;
+				bsZ = defaultBlocksizePrecomputeZ;
+			}
+		}
+
+		IOFunctions.println( "(" + new Date(System.currentTimeMillis()) + "): compute block size=" + bsX + "x" + bsY + "x" + bsZ);
+
+		return true;
+	}
 
 	@Override
 	public ImgExport newInstance() { return new DisplayImage(); }
@@ -215,4 +296,7 @@ public class DisplayImage implements ImgExport, Calibrateable
 
 	@Override
 	public double getPixelSize() { return cal; }
+
+	@Override
+	public int[] blocksize() { return new int[] { bsX, bsY, bsZ }; }
 }

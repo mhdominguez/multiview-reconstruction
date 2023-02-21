@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -22,15 +22,125 @@
  */
 package net.preibisch.mvrecon.process.fusion.transformed;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
+import mpicbg.spim.data.registration.ViewRegistration;
+import mpicbg.spim.data.sequence.ViewId;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
-import net.imglib2.realtransform.AffineGet;
-import net.imglib2.realtransform.AffineSet;
 import net.imglib2.realtransform.AffineTransform;
 import net.imglib2.realtransform.AffineTransform3D;
 
 public class TransformVirtual
 {
+	/**
+	 * Collects all ViewRegistrations, updates them, and potentially adds anisotropy and downsampling transformations
+	 * 
+	 * @param viewIds - all ViewIds to process
+	 * @param registrations - all ViewRegistrations
+	 * @param anisotropyFactor - a factor applied to z only (e.g. 3, or Double.NaN)
+	 * @param downsampling - a factor applied to xyz (e.g. 3, or Double.NaN)
+	 *
+	 * @return adjusted transformations
+	 */
+	public static HashMap< ViewId, AffineTransform3D > adjustAllTransforms(
+			final Collection< ? extends ViewId > viewIds,
+			final Map< ViewId, ? extends ViewRegistration > registrations,
+			final double anisotropyFactor,
+			final double downsampling )
+	{
+		return adjustAllTransforms( viewIds, registrations, 0, anisotropyFactor, downsampling );	
+	}
+	
+	/**
+	* Overloaded method adjustAllTransforms, below for orthogonal view fusions
+	*
+	* @param rotationType - 0 = none, 1 = X-Z swap (left-right), 2 = Y-Z swap (top-bottom)
+	*/
+	public static HashMap< ViewId, AffineTransform3D > adjustAllTransforms(
+			final Collection< ? extends ViewId > viewIds,
+			final Map< ViewId, ? extends ViewRegistration > registrations,
+			final int rotationType,
+			final double anisotropyFactor,
+			final double downsampling )
+	{
+		final HashMap< ViewId, AffineTransform3D > updatedRegistrations = new HashMap<>();
+
+		// get updated registration for views to fuse AND all other views that may influence the fusion
+		for ( final ViewId viewId : viewIds )
+		{
+			final ViewRegistration vr = registrations.get( viewId );
+			vr.updateModel();
+			final AffineTransform3D model = vr.getModel().copy();
+			
+			//handle orthogonal view fusion requests, note bounding box was modified above
+			if ( rotationType != 0 )
+			{
+				final AffineTransform3D rotate90 = new AffineTransform3D();
+				
+				if (rotationType == 1) // X-Z swap (left-right)
+					rotate90.set (0.0, 0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0);
+				
+				else if (rotationType == 2) // Y-Z swap (top-bottom)
+					rotate90.set (1.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+					
+				model.preConcatenate( rotate90 );
+			}
+
+			// preserve anisotropy
+			if ( !Double.isNaN( anisotropyFactor ) )
+				TransformVirtual.scaleTransform( model, new double[] { 1.0, 1.0, 1.0/anisotropyFactor } );
+
+			System.out.println( model );
+			// downsampling
+			if ( !Double.isNaN( downsampling ) )
+				TransformVirtual.scaleTransform( model, 1.0 / downsampling );
+			System.out.println( model );
+			System.out.println();
+
+			updatedRegistrations.put( viewId, model );
+		}
+
+		return updatedRegistrations;
+	}
+
+	/**
+	 * Updates existing transformations with anisotropy and downsampling transformations
+	 * 
+	 * @param registrations - all registrations
+	 * @param anisotropyFactor - a factor applied to z only (e.g. 3, or Double.NaN)
+	 * @param downsampling - a factor applied to xyz (e.g. 3, or Double.NaN)
+	 *
+	 * @return a copy of potentially updated transformations
+	 */
+	public static HashMap< ViewId, AffineTransform3D > adjustAllTransforms(
+			final Map< ViewId, ? extends AffineTransform3D > registrations,
+			final double anisotropyFactor,
+			final double downsampling )
+	{
+		final HashMap< ViewId, AffineTransform3D > updatedRegistrations = new HashMap<>();
+
+		// get updated registration for views to fuse AND all other views that may influence the fusion
+		for ( final ViewId viewId : registrations.keySet() )
+		{
+			final AffineTransform3D model = registrations.get( viewId ).copy();
+
+			// preserve anisotropy
+			if ( !Double.isNaN( anisotropyFactor ) )
+				TransformVirtual.scaleTransform( model, new double[] { 1.0, 1.0, 1.0/anisotropyFactor } );
+
+			// downsampling
+			if ( !Double.isNaN( downsampling ) )
+				TransformVirtual.scaleTransform( model, 1.0 / downsampling );
+
+			updatedRegistrations.put( viewId, model );
+		}
+
+		return updatedRegistrations;
+	}
+
 	/**
 	 * Scale the affine transform (use with scaleBoundingBox so it is the right image, but just smaller)
 	 * 

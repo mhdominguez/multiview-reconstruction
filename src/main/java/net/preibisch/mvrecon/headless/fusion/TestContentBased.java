@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -35,6 +35,7 @@ import net.preibisch.legacy.io.IOFunctions;
 import net.preibisch.mvrecon.process.export.DisplayImage;
 import net.preibisch.mvrecon.process.fusion.FusionTools;
 import net.preibisch.mvrecon.process.fusion.transformed.weights.ContentBasedRealRandomAccessible;
+import net.preibisch.mvrecon.process.interestpointdetection.methods.dog.DoGImgLib2;
 
 public class TestContentBased
 {
@@ -66,11 +67,11 @@ public class TestContentBased
 
 		IOFunctions.println( "Computing ... " + Util.printCoordinates( sigma1 ) + ", " + Util.printCoordinates( sigma2 ) );
 
-		ContentBasedRealRandomAccessible< FloatType > cb = new ContentBasedRealRandomAccessible< FloatType >( img, img.factory().imgFactory( new ComplexFloatType() ), sigma1, sigma2 );
+		ContentBasedRealRandomAccessible cb = new ContentBasedRealRandomAccessible( img, sigma1, sigma2, DoGImgLib2.blockSize, ContentBasedRealRandomAccessible.defaultScale );
 
 		IOFunctions.println( "Done ... " );
 
-		final ImagePlus imp = DisplayImage.getImagePlusInstance( cb.getContentBasedImg(), true, "brain", Double.NaN, Double.NaN );
+		final ImagePlus imp = DisplayImage.getImagePlusInstance( cb.getEntropy(), true, "brain", Double.NaN, Double.NaN );
 		imp.show();
 	}
 }

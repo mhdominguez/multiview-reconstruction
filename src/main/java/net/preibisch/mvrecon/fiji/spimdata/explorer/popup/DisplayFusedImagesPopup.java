@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -27,6 +27,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -39,6 +40,11 @@ import ij.gui.StackWindow;
 import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.sequence.ViewId;
 import net.imglib2.Interval;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.type.NativeType;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.FloatType;
 import net.preibisch.legacy.io.IOFunctions;
 import net.preibisch.mvrecon.fiji.plugin.util.MouseOverPopUpStateChanger;
 import net.preibisch.mvrecon.fiji.plugin.util.MouseOverPopUpStateChanger.StateChanger;
@@ -48,7 +54,10 @@ import net.preibisch.mvrecon.fiji.spimdata.explorer.ExplorerWindow;
 import net.preibisch.mvrecon.process.boundingbox.BoundingBoxTools;
 import net.preibisch.mvrecon.process.fusion.FusionTools;
 import net.preibisch.mvrecon.process.fusion.FusionTools.ImgDataType;
+import net.preibisch.mvrecon.process.fusion.lazy.LazyAffineFusion;
+import net.preibisch.mvrecon.process.fusion.transformed.TransformVirtual;
 import net.preibisch.mvrecon.process.downsampling.DownsampleTools;
+import net.preibisch.mvrecon.process.export.DisplayImage;
 
 public class DisplayFusedImagesPopup extends JMenu implements ExplorerWindowSetable
 {
@@ -108,12 +117,13 @@ public class DisplayFusedImagesPopup extends JMenu implements ExplorerWindowSeta
 								downsample = ds;
 							}
 
-							fused.addActionListener( new DisplayVirtualFused( spimData, views, bb, downsample, ImgDataType.values()[ defaultCache ] ) );
+							fused.addActionListener( new DisplayVirtualFused( spimData, views, bb, downsample/*, ImgDataType.values()[ defaultCache ]*/ ) );
 							downsampleOptions.add( fused );
 						}
 						boundingBoxes.add( downsampleOptions );
 					}
 
+					/*
 					boundingBoxes.add( new Separator() );
 
 					final JMenuItem[] items = new JMenuItem[ FusionTools.imgDataTypeChoice.length ];
@@ -139,7 +149,7 @@ public class DisplayFusedImagesPopup extends JMenu implements ExplorerWindowSeta
 						item.addMouseListener( mopusc );
 						boundingBoxes.add( item );
 					}
-
+					*/
 				}
 			}
 
@@ -165,15 +175,15 @@ public class DisplayFusedImagesPopup extends JMenu implements ExplorerWindowSeta
 		final ArrayList< ViewId > views;
 		final Interval bb;
 		final double downsampling;
-		final ImgDataType imgType;
+		//final ImgDataType imgType;
 
-		public DisplayVirtualFused( final SpimData spimData, final ArrayList< ViewId > views, final Interval bb, final double downsampling, final ImgDataType imgType )
+		public DisplayVirtualFused( final SpimData spimData, final ArrayList< ViewId > views, final Interval bb, final double downsampling/*, final ImgDataType imgType*/ )
 		{
 			this.spimData = spimData;
 			this.views = views;
 			this.bb = bb;
 			this.downsampling = downsampling;
-			this.imgType = imgType;
+			//this.imgType = imgType;
 		}
 
 		@Override
@@ -190,8 +200,44 @@ public class DisplayFusedImagesPopup extends JMenu implements ExplorerWindowSeta
 				@Override
 				public void run()
 				{
-					IOFunctions.println( new Date( System.currentTimeMillis() ) + ": Fusing " + views.size() + ", downsampling=" + DownsampleTools.printDownsampling( downsampling ) + ", caching strategy=" + imgType );
-					final ImagePlus imp = FusionTools.display( FusionTools.fuseVirtual( spimData, views, defaultUseBlending, false, defaultInterpolation, bb, downsampling, null ).getA(), imgType );
+					IOFunctions.println( new Date( System.currentTimeMillis() ) + ": Fusing " + views.size() + ", downsampling=" + DownsampleTools.printDownsampling( downsampling )/* + ", caching strategy=" + imgType*/ );
+
+					// adjust bounding box
+					final Interval bbDS = FusionTools.createDownsampledBoundingBox( bb, downsampling ).getA();
+
+					// adjust registrations
+					final HashMap< ViewId, AffineTransform3D > registrations =
+							TransformVirtual.adjustAllTransforms(
+									views,
+									spimData.getViewRegistrations().getViewRegistrations(),
+									Double.NaN,
+									downsampling );
+
+					final RandomAccessibleInterval<FloatType> lazyFused = LazyAffineFusion.init(
+							null,
+							spimData.getSequenceDescription().getImgLoader(),
+							views,
+							registrations,
+							spimData.getSequenceDescription().getViewDescriptions(),
+							defaultUseBlending, // blending
+							0, // content based
+							defaultInterpolation, // linear interpolatio
+							null,
+							bbDS,
+							new FloatType(),
+							new int[] { 128, 128, 1 } );
+					/*
+					final ImagePlus imp =
+							FusionTools.display(
+									FusionTools.fuseVirtual(
+											spimData.getSequenceDescription().getImgLoader(),
+											registrations,
+											spimData.getSequenceDescription().getViewDescriptions(),
+											views, defaultUseBlending, false, defaultInterpolation, bbDS, null ),
+									imgType );
+					*/
+
+					final ImagePlus imp = DisplayImage.getImagePlusInstance( lazyFused, false, "Fused Non-rigid", 0, 255 );
 
 					if ( imp.getStack().getSize() > 1 )
 					{

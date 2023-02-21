@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -34,6 +34,7 @@ import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Pair;
 import net.imglib2.view.Views;
 import net.preibisch.legacy.io.IOFunctions;
 import net.preibisch.mvrecon.Threads;
@@ -65,6 +66,7 @@ public class DoG
 	 *
 	 * more parameters are omitted
 	 *
+	 * @param <T> - the type, RealType and NativeType
 	 * @param input - any RandomAccessibleInterval (Img will be casted only otherwise copied), non-FloatType will be converted, everything is normalized to 0...1 for processing
 	 * @param sigma - sigma for the DoG detection (try InteractiveDoG to figure out the right parameters)
 	 * @param threshold - threshold for the DoG detection (try InteractiveDoG to figure out the right parameters)
@@ -136,24 +138,19 @@ public class DoG
 				if ( !vd.isPresent() )
 					continue;
 
-				final AffineTransform3D correctCoordinates = new AffineTransform3D();
-
 				final ExecutorService service = Threads.createFixedExecutorService( Threads.numThreads() );
 
 				// TODO: downsampling is not virtual!
-				@SuppressWarnings("unchecked")
-				final RandomAccessibleInterval< FloatType > input =
+				@SuppressWarnings({"rawtypes" })
+				final Pair<RandomAccessibleInterval, AffineTransform3D> input =
 						DownsampleTools.openAndDownsample(
 								dog.imgloader,
 								vd,
-								correctCoordinates,
-								new long[] { dog.downsampleXY, dog.downsampleXY, dog.downsampleZ },
-								false,  //transformOnly
-								false   //openAsFloat 
-								);
+								new long[] { dog.downsampleXY, dog.downsampleXY, dog.downsampleZ } );
 
+				@SuppressWarnings("unchecked")
 				List< InterestPoint > ips = DoGImgLib2.computeDoG(
-							input,
+							input.getA(),
 							null, // mask
 							dog.sigma,
 							dog.threshold,
@@ -174,7 +171,7 @@ public class DoG
 				if ( dog.limitDetections )
 					ips = InterestPointTools.limitList( dog.maxDetections, dog.maxDetectionsTypeIndex, ips );
 
-				DownsampleTools.correctForDownsampling( ips, correctCoordinates );
+				DownsampleTools.correctForDownsampling( ips, input.getB() );
 
 				interestPoints.put( vd, ips );
 			} catch ( Exception e )
