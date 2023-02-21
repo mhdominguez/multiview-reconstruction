@@ -329,9 +329,10 @@ public class FusionGUI implements FusionExportInterface
 		if ( hasIntensityAdjustments )
 			gd.addCheckbox( "Adjust_image_intensities (only use with 32-bit output)", defaultAdjustIntensities );
 
-		IJ.log( "avgAnisoF: " + avgAnisoF );
+		//IJ.log( "avgAnisoF: " + avgAnisoF );
 		if ( avgAnisoF > 1.01 || avgAnisoF < 0.99 ) // for numerical instabilities (computed upon instantiation)
-		{
+			avgAnisoF = 1.0;
+		//{
 
 			//gd.addCheckbox( "Preserve_original data anisotropy (shrink image in z)", defaultPreserveAnisotropy );
 			//anisoCheckbox = PluginHelper.isHeadless() ? null : (Checkbox)gd.getCheckboxes().lastElement();
@@ -341,11 +342,11 @@ public class FusionGUI implements FusionExportInterface
 			gd.addMessage(
 					"WARNING: Enabling this means to 'shrink' (or in rate case 'stretch') the dataset in z the same way the input\n" +
 					"images were scaled. Only use this if this is not a multiview dataset.", GUIHelper.smallStatusFont, GUIHelper.warning );
-		}
-		else
-		{
+		//}
+		//else
+		//{
 			//anisoCheckbox = null;
-		}
+		//}
 
 		gd.addChoice( "Produce one fused image for", splittingTypes, splittingTypes[ defaultSplittingType ] );
 		splitChoice = PluginHelper.isHeadless() ? null : (Choice)gd.getChoices().lastElement();

@@ -551,9 +551,9 @@ public class FusionTools
 					if ( useContentBased > 1 )
 					{
 						// get the scale factors
-						final long[] scalefactors = new long[ 3 ];
+						final double[] scalefactors = new double[ 3 ];
 						for ( int d = 0; d < 3; ++d )
-						scalefactors[ d ] = Double.valueOf(downsamplingContentBased).longValue();
+							scalefactors[ d ] = Double.valueOf(downsamplingContentBased).longValue();
 
 						// downsample image for weight calculation
 						RandomAccessibleInterval inputImg_cb = Downsample.downsample( inputImg, scalefactors );
@@ -568,7 +568,7 @@ public class FusionTools
 						
 						System.out.println( "Adjusted content based 2x-4x sigma1=" + Util.printCoordinates( sigma1 ) + " , sigma2="+ Util.printCoordinates( sigma2 ));
 
-						transformedContentBased = TransformWeight.transformContentBased( inputImg_cb, sigma1, sigma2, LazyFusionTools.defaultBlockSize3d, model_cb_up, bb );
+						transformedContentBased = TransformWeight.transformContentBased( inputImg_cb, sigma1, sigma2, LazyFusionTools.defaultBlockSize3d, model, bb );
 					}
 					else
 					{
