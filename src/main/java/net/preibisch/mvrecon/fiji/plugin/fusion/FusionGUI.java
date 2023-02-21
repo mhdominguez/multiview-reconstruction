@@ -368,6 +368,7 @@ public class FusionGUI implements FusionExportInterface
 					//cachingChoice,
 					nonrigidChoice,
 					contentbasedCheckbox,
+					rotationChoice,
 					//anisoCheckbox,
 					downsampleZField,
 					splitChoice,

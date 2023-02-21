@@ -58,6 +58,7 @@ public class ManageFusionDialogListeners
 			//final Choice cachingChoice,
 			final Choice nonRigidChoice,
 			final Choice contentbasedCheckbox,
+			final Choice rotationChoice,
 			//final Checkbox anisoCheckbox,
 			final TextField downsampleZField,
 			final Choice splitChoice,
@@ -78,9 +79,14 @@ public class ManageFusionDialogListeners
 		this.label1 = label1;
 		this.label2 = label2;
 		this.fusion = fusion;
+		this.rotationChoice = rotationChoice;
 
 		this.boundingBoxChoice.addItemListener( new ItemListener() { @Override
 			public void itemStateChanged(ItemEvent e) { update(); } });
+
+		this.rotationChoice.addItemListener( new ItemListener() { @Override
+			public void itemStateChanged(ItemEvent e) { update(); } });
+
 
 		this.downsampleField.addTextListener( new TextListener() { @Override
 			public void textValueChanged(TextEvent e) { update(); } });
@@ -122,6 +128,8 @@ public class ManageFusionDialogListeners
 		//fusion.cacheType = cachingChoice.getSelectedIndex();
 		fusion.useContentBased = contentbasedCheckbox.getSelectedIndex();
 		fusion.splittingType = splitChoice.getSelectedIndex();
+
+		fusion.rotationChoice = rotationChoice.getSelectedIndex();
 		/*if ( anisoCheckbox != null )
 		{
 			fusion.preserveAnisotropy = anisoCheckbox.getState();
