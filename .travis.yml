@@ -1,4 +1,4 @@
-dist: jammy
+dist: trusty
 language: java
 jdk: openjdk8
 branches:
@@ -8,7 +8,7 @@ branches:
   - 1.0-content-based-sigma-check
 before_install:
   - sudo apt-get update
-  - sudo apt-get install -y openjdk-8-jdk=8u312-b07-0ubuntu1 openjfx=8u161-b12-1ubuntu2 libopenjfx-java=8u161-b12-1ubuntu2 libopenjfx-jni=8u161-b12-1ubuntu2
+  - sudo apt-get install -y openjfx libopenjfx-java libopenjfx-jni
 install: true
 script: ".travis/build.sh"
 cache:
