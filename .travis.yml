@@ -7,7 +7,13 @@ branches:
   - 1.0-content-based-sigma-check
 before_install:
   - sudo apt-get update
-  - sudo apt-get install -y openjdk-8-jdk openjfx libopenjfx-java libopenjfx-jni maven
+  - sudo apt-get install -y openjdk-8-jdk openjfx libopenjfx-java libopenjfx-jni
+  - cd ~; wget https://dlcdn.apache.org/maven/maven-3/3.5.4/binaries/apache-maven-3.5.4-bin.tar.gz
+  - sudo tar -xf apache-maven-3.5.4-bin.tar.gz -C /usr/local
+  - cd /usr/local; sudo ln -s apache-maven-3.5.4 maven
+  - export M2_HOME=/usr/local/maven
+  - export PATH=${M2_HOME}/bin:${PATH}
+  - mvn -v
 install: true
 script: ".travis/build.sh"
 cache:
