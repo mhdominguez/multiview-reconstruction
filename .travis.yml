@@ -29,6 +29,11 @@ env:
   - secure: CW69w0mwItQUwssdN4pxW0TMkkSFLXV9uyzyT7NjafWF++ILniIzJyMZ2GNrIteMvbg9fWUUx6bcyovODU0eKeSjvSB0X2Ux3r0XGE1+Vb0pdy1R72NqAFEiZ7frt9OT27nsu3DA7MMOVOnUlQSxowAdc0z5pxk6D2Ls1Pbc5lRwV82clpZxvlSadcFqX7bgxalFGsAIM6xv8an6N9HFjdaoegJbzF/ZNN5+3fIBwhV4RJWcoycL+g94f9RaPDO3A7jMBEB4Q6F5a4rmHv6wBskNO0e0t06LFdOeAYwSr8d/h7TIo3Saq7iotcLvu35rWaHDcmvGHEB/NLp+Wy3p2e61umRaS8uN7gkrynrfUvsgnzUDoehRIKde5u+VA29RIR30a0hsrULo9OLysW4OeKAZk7qkzS2eQ7KA/gy1Bst26z9pqgnxJ77YTA9v0zr2C3KpWKqqE+/0lvefV9bZJxlN/WZpD9xJrFMaUE48TYAUDpy+E+VngcbEflGALzeMlV1fazEKS6aIPO4o1J3xsDPtWQlW8xIC5csL4KGfWGWn+PaveKqsrt/4pFBJ6Q3tv7Dnq7CzC+ZdEdqe+K5S8yM+9DgG1I0XAPbz1cYpy8aLpbRmdCRsXozLOMbqyvUgIvM92PG9Um0QbBJGq32oisR7vgzPe+BRMsN1e3IPU4k=
 deploy:
   provider: releases
+  on:
+    branches:
+    - master
+    - 1.0-content-based-sigma-check
+  
   api_key: 
   #console lines to generate the "secure" line...
     #sudo apt install ruby
