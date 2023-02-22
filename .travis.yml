@@ -6,6 +6,7 @@ branches:
   - "/.*-[0-9]+\\..*/"
   - 1.0-content-based-sigma-check
 before_install:
+  - curloc=`pwd`; echo $curloc
   - sudo apt-get update
   - sudo apt-get install -y openjdk-8-jdk openjfx libopenjfx-java libopenjfx-jni
   - cd ~; wget https://dlcdn.apache.org/maven/maven-3/3.5.4/binaries/apache-maven-3.5.4-bin.tar.gz
@@ -14,6 +15,7 @@ before_install:
   - export M2_HOME=/usr/local/maven
   - export PATH=${M2_HOME}/bin:${PATH}
   - mvn -v
+  - cd $curloc
 install: true
 script: ".travis/build.sh"
 cache:
