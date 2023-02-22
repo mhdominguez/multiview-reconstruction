@@ -423,10 +423,11 @@ public class FusionGUI implements FusionExportInterface
 			adjustIntensities = defaultAdjustIntensities = gd.getNextBoolean();
 		else
 			adjustIntensities = false;
+
 		if ( avgAnisoF > 1.01 || avgAnisoF < 0.99 )
-			preserveAnisotropy = defaultPreserveAnisotropy = gd.getNextBoolean();
+			preserveAnisotropy =  true; //defaultPreserveAnisotropy = gd.getNextBoolean();
 		else
-			preserveAnisotropy = defaultPreserveAnisotropy = false;
+			preserveAnisotropy = false; // defaultPreserveAnisotropy = false;
 
 		if ( !preserveAnisotropy )
 		{
