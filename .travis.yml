@@ -8,7 +8,7 @@ branches:
   - 1.0-content-based-sigma-check
 before_install:
   - sudo apt-get update
-  - sudo apt-get install -y openjdk-8-jdk=8u292-b10-0ubuntu1~18.04 openjfx libopenjfx-java libopenjfx-jni
+  - sudo apt-get install -y openjdk-8-jdk openjfx libopenjfx-java libopenjfx-jni
 install: true
 script: ".travis/build.sh"
 cache:
