@@ -31,8 +31,9 @@ deploy:
   provider: releases
   on:
     branches:
-    - master
-    - 1.0-content-based-sigma-check
+      only:    
+      - master
+      - 1.0-content-based-sigma-check
   
   api_key: 
   #console lines to generate the "secure" line...
