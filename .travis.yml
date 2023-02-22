@@ -30,11 +30,7 @@ env:
 deploy:
   provider: releases
   on:
-    branches:
-      only:    
-      - master
-      - 1.0-content-based-sigma-check
-  
+    branch: 1.0-content-based-sigma-check
   api_key: 
   #console lines to generate the "secure" line...
     #sudo apt install ruby
