@@ -352,7 +352,7 @@ public class DeconvolutionGUI implements FusionExportInterface
 		if ( !PluginHelper.isHeadless() ) boundingBoxChoice = (Choice)gd.getChoices().lastElement();
 		gd.addMessage( "" );
 
-		gd.addSlider( "Downsampling", 1.0, 16.0, defaultDownsampling );
+		gd.addSlider( "Downsampling", 0.001, 16.0, defaultDownsampling );
 		if ( !PluginHelper.isHeadless() ) downsampleField = (TextField)gd.getNumericFields().lastElement();
 		gd.addChoice( "Input image(s)", FusionTools.imgDataTypeChoice, FusionTools.imgDataTypeChoice[ defaultInputImgCacheType ] );
 		if ( !PluginHelper.isHeadless() ) inputCacheChoice = (Choice)gd.getChoices().lastElement();
