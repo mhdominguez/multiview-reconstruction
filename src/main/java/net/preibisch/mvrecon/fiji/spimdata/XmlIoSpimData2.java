@@ -47,6 +47,7 @@ import mpicbg.spim.data.registration.XmlIoViewRegistrations;
 import mpicbg.spim.data.sequence.SequenceDescription;
 import mpicbg.spim.data.sequence.XmlIoSequenceDescription;
 
+import org.janelia.saalfeldlab.n5.N5FSWriter;
 import org.jdom2.Element;
 
 public class XmlIoSpimData2 extends XmlIoAbstractSpimData< SequenceDescription, SpimData2 >
@@ -59,7 +60,8 @@ public class XmlIoSpimData2 extends XmlIoAbstractSpimData< SequenceDescription, 
 
 	String clusterExt, lastFileName;
 	public static int numBackups = 5;
-	
+	public static boolean initN5Writing = true;
+
 	public XmlIoSpimData2( final String clusterExt )
 	{
 		super( SpimData2.class, new XmlIoSequenceDescription(), new XmlIoViewRegistrations() );
@@ -80,6 +82,17 @@ public class XmlIoSpimData2 extends XmlIoAbstractSpimData< SequenceDescription, 
 		this.handledTags.add( xmlIntensityAdjustments.getTag() );
 
 		this.clusterExt = clusterExt;
+
+		if ( initN5Writing )
+		{
+			try
+			{
+				// trigger the N5-blosc error, because if it is triggered for the first
+				// time inside Spark, everything crashes
+				new N5FSWriter(null);
+			}
+			catch (Exception e ) {}
+		}
 	}
 
 	public void setClusterExt( final String clusterExt ) { this.clusterExt = clusterExt; }
@@ -129,6 +142,8 @@ public class XmlIoSpimData2 extends XmlIoAbstractSpimData< SequenceDescription, 
 		}
 
 		super.save( spimData, xmlFilename );
+
+		// save also as zarr metadata object
 	}
 
 	public String lastFileName() { return lastFileName; }
@@ -169,7 +184,7 @@ public class XmlIoSpimData2 extends XmlIoAbstractSpimData< SequenceDescription, 
 		if ( elem == null )
 		{
 			viewsInterestPoints = new ViewInterestPoints();
-			viewsInterestPoints.createViewInterestPoints( seq.getViewDescriptions() );
+			//viewsInterestPoints.createViewInterestPoints( seq.getViewDescriptions() );
 		}
 		else
 		{

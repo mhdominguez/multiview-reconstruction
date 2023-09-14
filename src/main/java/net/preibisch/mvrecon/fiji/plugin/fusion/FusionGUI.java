@@ -205,7 +205,7 @@ public class FusionGUI implements FusionExportInterface
 
 	//public int getCacheType() { return cacheType; }
 
-	public boolean manuallyDefinedMinMax() { return defineMinMax==0; }
+	public boolean manuallyDefinedMinMax() { return defineMinMax==1; }
 	public double minIntensity() { return min; }
 	public double maxIntensity() { return max; }
 
@@ -233,7 +233,7 @@ public class FusionGUI implements FusionExportInterface
 	{
 		final String[] values = new String[] {
 				"Auto-load from input data (values shown below)",
-				"Manually define range of input data (change values below)"};
+				"Manually define range of input data (in next dialog)"};
 
 		final GenericDialog gd = new GenericDialog( "Define min/max values for image export" );
 
@@ -243,8 +243,8 @@ public class FusionGUI implements FusionExportInterface
 				+ "(those values are displayed below -- except you previously changed them).\n"
 				+ "You can override these by selecting 'manual' and providing the values.", GUIHelper.smallStatusFont, GUIHelper.neutral );
 
-		gd.addMessage( "Tipp: 8-bit range [0..255], 16-bit range [0..65535]", GUIHelper.smallStatusFont, GUIHelper.neutral );
-		gd.addMessage( "Tipp: Usually you can leave everthing as-is, but if your original data\n"
+		gd.addMessage( "Tip: 8-bit range [0..255], 16-bit range [0..65535]", GUIHelper.smallStatusFont, GUIHelper.neutral );
+		gd.addMessage( "Tip: Usually you can leave everthing as-is, but if your original data\n"
 				+ "was 8-bit and you export as 8-bit you should specify [0..255] here.", GUIHelper.smallStatusFont, GUIHelper.warning );
 
 		gd.addChoice(
@@ -252,17 +252,45 @@ public class FusionGUI implements FusionExportInterface
 				values,
 				values[ defaultDefineMinMax ] );
 
-		gd.addNumericField( "min", defaultDefineMinMax == 1 || autoValues == null ? defaultMin : autoValues[ 0 ] );
-		gd.addNumericField( "max", defaultDefineMinMax == 1 || autoValues == null ? defaultMax : autoValues[ 1 ] );
+		if ( autoValues == null )
+		{
+			gd.addMessage( "Min & max could not be found automatically, please specify it in the next dialog\n(we only show this dialog so it stays macro-recordable)", GUIHelper.mediumstatusNonItalicfont, GUIHelper.neutral );
+		}
+		else
+		{
+			gd.addMessage(
+					"Automatically found min="+autoValues[ 0 ]+"\n" +
+					"Automatically found max="+autoValues[ 1 ], GUIHelper.mediumstatusNonItalicfont, GUIHelper.neutral );
+		}
 
 		gd.showDialog();
 		if ( gd.wasCanceled() )
 			return null;
 
 		defineMinMax = defaultDefineMinMax = gd.getNextChoiceIndex();
+
 		double[] minmax = new double[ 2 ];
-		minmax[ 0 ] = defaultMin = gd.getNextNumber();
-		minmax[ 1 ] = defaultMax = gd.getNextNumber();
+
+		if ( autoValues != null && defineMinMax == 0 )
+		{
+			defineMinMax = 0;
+			minmax[ 0 ] = defaultMin = autoValues[ 0 ];
+			minmax[ 1 ] = defaultMax = autoValues[ 1 ];
+		}
+		else
+		{
+			defineMinMax = 1;
+			final GenericDialog gd2 = new GenericDialog( "Define min/max values for image export (2)" );
+			gd2.addNumericField( "min (input intensities)", autoValues == null ? defaultMin : autoValues[ 0 ] );
+			gd2.addNumericField( "max (input intensities)", autoValues == null ? defaultMax : autoValues[ 1 ] );
+
+			gd2.showDialog();
+			if ( gd2.wasCanceled() )
+				return null;
+
+			minmax[ 0 ] = defaultMin = gd2.getNextNumber();
+			minmax[ 1 ] = defaultMax = gd2.getNextNumber();
+		}
 
 		return minmax;
 	}

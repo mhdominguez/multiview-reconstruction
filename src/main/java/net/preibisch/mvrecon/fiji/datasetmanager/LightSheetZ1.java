@@ -103,7 +103,7 @@ public class LightSheetZ1 implements MultiViewDatasetDefinition
 	}
 
 	@Override
-	public SpimData2 createDataset()
+	public SpimData2 createDataset( final String xmlFileName )
 	{
 		final File cziFile = queryCZIFile();
 
@@ -145,7 +145,7 @@ public class LightSheetZ1 implements MultiViewDatasetDefinition
 		
 		// create the initial view interest point object
 		final ViewInterestPoints viewInterestPoints = new ViewInterestPoints();
-		viewInterestPoints.createViewInterestPoints( sequenceDescription.getViewDescriptions() );
+		//viewInterestPoints.createViewInterestPoints( sequenceDescription.getViewDescriptions() );
 
 		// finally create the SpimData itself based on the sequence description and the view registration
 		final SpimData2 spimData = new SpimData2( new File( directory ), sequenceDescription, viewRegistrations, viewInterestPoints, new BoundingBoxes(), new PointSpreadFunctions(), new StitchingResults(), new IntensityAdjustments() );
@@ -439,7 +439,7 @@ public class LightSheetZ1 implements MultiViewDatasetDefinition
 		//defaultFirstFile = "/Volumes/My Passport/Zeiss Olaf Lightsheet Z.1/multiview.czi";
 		defaultFirstFile = "/Users/david/Desktop/_twotiles.czi";
 		//defaultFirstFile = "/Volumes/My Passport/Zeiss Olaf Lightsheet Z.1/worm7/Track1.czi";
-		SpimData2 sd = new LightSheetZ1().createDataset();
+		SpimData2 sd = new LightSheetZ1().createDataset( "dataset.xml" );
 		
 		BigDataViewer.open(  sd, "", null, ViewerOptions.options() );
 	}

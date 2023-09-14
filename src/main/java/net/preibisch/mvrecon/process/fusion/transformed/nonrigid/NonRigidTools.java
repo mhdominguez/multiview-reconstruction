@@ -48,7 +48,7 @@ import mpicbg.spim.data.sequence.ViewId;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.converter.read.ConvertedRandomAccessibleInterval;
+import net.imglib2.converter.Converters;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
@@ -61,7 +61,7 @@ import net.preibisch.legacy.io.IOFunctions;
 import net.preibisch.mvrecon.fiji.spimdata.SpimData2;
 import net.preibisch.mvrecon.fiji.spimdata.interestpoints.CorrespondingInterestPoints;
 import net.preibisch.mvrecon.fiji.spimdata.interestpoints.InterestPoint;
-import net.preibisch.mvrecon.fiji.spimdata.interestpoints.InterestPointList;
+import net.preibisch.mvrecon.fiji.spimdata.interestpoints.InterestPoints;
 import net.preibisch.mvrecon.fiji.spimdata.interestpoints.ViewInterestPointLists;
 import net.preibisch.mvrecon.process.boundingbox.BoundingBoxReorientation;
 import net.preibisch.mvrecon.process.downsampling.DownsampleTools;
@@ -263,7 +263,7 @@ public class NonRigidTools
 				
 				if ( viewInterestPoints.get( viewId ).contains( label ) )
 				{
-					final InterestPointList ipList = viewInterestPoints.get( viewId ).getInterestPointList( label );
+					final InterestPoints ipList = viewInterestPoints.get( viewId ).getInterestPointList( label );
 
 					final List< CorrespondingInterestPoints > cipList = ipList.getCorrespondingInterestPointsCopy();
 					IOFunctions.println( new Date( System.currentTimeMillis() ) + ": There are " + cipList.size() + " corresponding interest points in total (to all views)." );
@@ -370,7 +370,7 @@ public class NonRigidTools
 				inputImg = inputData.getA();
 
 				if ( intensityAdjustments != null && intensityAdjustments.containsKey( viewId ) )
-					inputImg = new ConvertedRandomAccessibleInterval< FloatType, FloatType >(
+					inputImg = Converters.convert(
 							FusionTools.convertInput( inputImg ),
 							new IntensityAdjuster( intensityAdjustments.get( viewId ) ),
 							new FloatType() );
@@ -853,7 +853,7 @@ public class NonRigidTools
 
 	public static ArrayList< CorrespondingIP > assembleAllCorrespondingPoints(
 			final ViewId viewId,
-			final InterestPointList ipList,
+			final InterestPoints ipList,
 			final List< ? extends CorrespondingInterestPoints > cipList,
 			final Collection< ? extends ViewId > viewsToUse,
 			final Map< ? extends ViewId, ? extends ViewInterestPointLists > interestPointLists )
@@ -919,7 +919,7 @@ public class NonRigidTools
 					return null;
 				}
 
-				final InterestPointList corrIpList = vipl.getInterestPointList( corrLabel );
+				final InterestPoints corrIpList = vipl.getInterestPointList( corrLabel );
 
 				if ( corrIpList == null )
 				{

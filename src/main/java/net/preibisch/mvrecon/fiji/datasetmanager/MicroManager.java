@@ -75,7 +75,7 @@ public class MicroManager implements MultiViewDatasetDefinition
 	}
 
 	@Override
-	public SpimData2 createDataset()
+	public SpimData2 createDataset( final String xmlFileName )
 	{
 		final File mmFile = queryMMFile();
 
@@ -120,7 +120,7 @@ public class MicroManager implements MultiViewDatasetDefinition
 		
 		// create the initial view interest point object
 		final ViewInterestPoints viewInterestPoints = new ViewInterestPoints();
-		viewInterestPoints.createViewInterestPoints( sequenceDescription.getViewDescriptions() );
+		//viewInterestPoints.createViewInterestPoints( sequenceDescription.getViewDescriptions() );
 
 		// finally create the SpimData itself based on the sequence description and the view registration
 		final SpimData2 spimData = new SpimData2( new File( directory ), sequenceDescription, viewRegistrations, viewInterestPoints, new BoundingBoxes(), new PointSpreadFunctions(), new StitchingResults(), new IntensityAdjustments() );
@@ -339,6 +339,6 @@ public class MicroManager implements MultiViewDatasetDefinition
 		//defaultFirstFile = "/Volumes/My Passport/Zeiss Olaf Lightsheet Z.1/abe_Arabidopsis1.czi";
 		defaultFirstFile = "/Volumes/My Passport/Zeiss Olaf Lightsheet Z.1/multiview.czi";
 		//defaultFirstFile = "/Volumes/My Passport/Zeiss Olaf Lightsheet Z.1/worm7/Track1.czi";
-		new MicroManager().createDataset();
+		new MicroManager().createDataset("dataset.xml");
 	}
 }

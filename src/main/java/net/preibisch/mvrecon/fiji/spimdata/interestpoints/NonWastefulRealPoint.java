@@ -20,20 +20,14 @@
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  * #L%
  */
-package net.preibisch.mvrecon.process.export2;
+package net.preibisch.mvrecon.fiji.spimdata.interestpoints;
 
-import java.util.function.Consumer;
-import java.util.function.Supplier;
+import net.imglib2.RealPoint;
 
-import net.imglib2.Interval;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.type.NativeType;
-import net.imglib2.type.numeric.RealType;
-
-public interface BlockedImgExport
+public class NonWastefulRealPoint extends RealPoint
 {
-	public <T extends RealType< T > & NativeType< T >> void export(
-			final Supplier<Consumer<RandomAccessibleInterval<T>>> consumerSupplier,
-			final Interval fusionInterval,
-			final int[] blockSize );
+	public NonWastefulRealPoint( final double[] position, final boolean copy )
+	{
+		super( position, copy );
+	}
 }

@@ -66,15 +66,12 @@ import net.preibisch.mvrecon.fiji.ImgLib2Temp.ValuePair;
 import net.preibisch.mvrecon.fiji.plugin.queryXML.LoadParseQueryXML;
 import net.preibisch.mvrecon.fiji.spimdata.SpimData2;
 import net.preibisch.mvrecon.fiji.spimdata.imgloaders.StackImgLoaderIJ;
-import net.preibisch.mvrecon.fiji.spimdata.interestpoints.InterestPointList;
-import net.preibisch.mvrecon.fiji.spimdata.interestpoints.ViewInterestPointLists;
 import net.preibisch.mvrecon.fiji.spimdata.interestpoints.ViewInterestPoints;
 import net.preibisch.mvrecon.process.export.Save3dTIFF;
 
 public class Resave_TIFF implements PlugIn
 {
 	public static String defaultPath = null;
-	public static int defaultContainer = 1;
 	public static boolean defaultCompress = false;
 
 	public static void main( final String[] args )
@@ -84,13 +81,11 @@ public class Resave_TIFF implements PlugIn
 
 	public static class Parameters
 	{
-		public ImgFactory< ? extends NativeType< ? > > imgFactory;
 		public String xmlFile;
 		public boolean compress;
 		
 		public boolean compress() { return compress; }
 		public String getXMLFile() { return xmlFile; }
-		public ImgFactory< ? extends NativeType< ? > > getImgFactory() { return imgFactory; }
 	}
 
 	@Override
@@ -203,11 +198,6 @@ public class Resave_TIFF implements PlugIn
 
 		params.compress = false; //defaultCompress = gd.getNextBoolean();
 
-		if ( defaultContainer == 0 )
-			params.imgFactory = new ArrayImgFactory< FloatType >();
-		else
-			params.imgFactory = new CellImgFactory< FloatType >();
-
 		return params;
 	}
 
@@ -316,7 +306,7 @@ public class Resave_TIFF implements PlugIn
 
 		final StackImgLoaderIJ imgLoader = new StackImgLoaderIJ(
 				new File( params.xmlFile ).getParentFile(),
-				filename, params.imgFactory,
+				filename,
 				layoutTP, layoutChannels, layoutIllum, layoutAngles, layoutTiles, newSpimData.getSequenceDescription() );
 		newSpimData.getSequenceDescription().setImgLoader( imgLoader );
 
@@ -435,7 +425,8 @@ public class Resave_TIFF implements PlugIn
 				newRegMap.put( viewId, oldRegMap.get( viewId ) );
 
 		final ViewRegistrations viewRegistrations = new ViewRegistrations( newRegMap );
-		
+
+		/*
 		// re-assemble the interestpoints and a list of filenames to copy
 		final Map< ViewId, ViewInterestPointLists > oldInterestPoints = spimData.getViewInterestPoints().getViewInterestPoints();
 		final Map< ViewId, ViewInterestPointLists > newInterestPoints = new HashMap< ViewId, ViewInterestPointLists >();
@@ -449,20 +440,21 @@ public class Resave_TIFF implements PlugIn
 				if ( filesToCopy != null )
 				{
 					// get also all the filenames that we need to copy
-					for ( final InterestPointList ipl : ipLists.getHashMap().values() )
+					for ( final InterestPoints ipl : ipLists.getHashMap().values() )
 						filesToCopy.add( ipl.getFile().getName() );
 				}
 			}
 
-		final ViewInterestPoints viewsInterestPoints = new ViewInterestPoints( newInterestPoints );
+		final ViewInterestPoints viewsInterestPoints = new ViewInterestPoints( newInterestPoints );*/
 
+		//TODO: copy interestpoints
 		//TODO: copy PSFs
 
 		final SpimData2 newSpimData = new SpimData2(
 				basePath,
 				sequenceDescription,
 				viewRegistrations,
-				viewsInterestPoints,
+				new ViewInterestPoints(),
 				spimData.getBoundingBoxes(),
 				spimData.getPointSpreadFunctions(),
 				spimData.getStitchingResults(),

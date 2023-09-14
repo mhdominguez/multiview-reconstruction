@@ -39,39 +39,46 @@ import net.preibisch.legacy.io.TextFileAccess;
  * @author Stephan Preibisch (stephan.preibisch@gmx.de)
  *
  */
-public class InterestPointList
+public class InterestPointsTextFileList extends InterestPoints
 {
-	File baseDir, file;
+	File file;
 	List< InterestPoint > interestPoints;
 	List< CorrespondingInterestPoints > correspondingInterestPoints;
-	String parameters;
-
-	boolean modifiedInterestPoints, modifiedCorrespondingInterestPoints;
 
 	/**
-	 * Instantiates a new {@link InterestPointList}
+	 * Instantiates a new {@link InterestPoints}
 	 * 
 	 * @param baseDir - the path where the xml is
 	 * @param file - relative path to the file to load/save the list from, an extension is added automatically (.ip.txt &amp;&amp; .corr.txt)
 	 * for interestpoints and correspondences
 	 */
-	public InterestPointList( final File baseDir, final File file )
+	protected InterestPointsTextFileList( final File baseDir, final File file )
 	{
-		this.baseDir = baseDir;
+		super( baseDir );
+
 		this.file = file;
 		this.interestPoints = null;
 		this.correspondingInterestPoints = null;
 		this.parameters = "";
-		this.modifiedInterestPoints = false;
-		this.modifiedCorrespondingInterestPoints = false;
 	}
 
-	public boolean hasModifiedInterestPoints() { return modifiedInterestPoints; }
-	public boolean hasModifiedCorrespondingInterestPoints() { return modifiedCorrespondingInterestPoints; }
+	@Override
+	public String getXMLRepresentation() {
+		// a hack so that windows does not put its backslashes in
+		return getFile().toString().replace( "\\", "/" );
+	}
+
+	@Override
+	public String createXMLRepresentation( final ViewId viewId, final String label )
+	{
+		return new File( "interestpoints", "tpId_" + viewId.getTimePointId() +
+		"_viewSetupId_" + viewId.getViewSetupId() + "." + label ).getPath();
+	}
 
 	/**
 	 * @return - a list of interest points (copied), tries to load from disc if null
 	 */
+	@Override
 	public synchronized List< InterestPoint > getInterestPointsCopy()
 	{
 		if ( this.interestPoints == null )
@@ -101,29 +108,23 @@ public class InterestPointList
 		return list;
 	}
 
-	public File getBaseDir() { return baseDir; }
 	public File getFile() { return file; }
-	public String getParameters() { return parameters; }
-	public void setParameters( final String parameters ) { this.parameters = parameters; }
-	public void setInterestPoints( final List< InterestPoint > list )
+
+	@Override
+	protected void setInterestPointsLocal( final List< InterestPoint > list )
 	{
 		this.interestPoints = list;
-		this.modifiedInterestPoints = true;
 	}
-	public void setCorrespondingInterestPoints( final List< CorrespondingInterestPoints > list )
+
+	@Override
+	protected void setCorrespondingInterestPointsLocal( final List< CorrespondingInterestPoints > list )
 	{
 		this.correspondingInterestPoints = list;
-		this.modifiedCorrespondingInterestPoints = true;
 	}
+
 	public void setFile( final File file )
 	{
 		this.file = file;
-		this.modifiedCorrespondingInterestPoints = true;
-		this.modifiedInterestPoints = true;
-	}
-	public void setBaseDir( final File baseDir )
-	{
-		this.baseDir = baseDir;
 		this.modifiedCorrespondingInterestPoints = true;
 		this.modifiedInterestPoints = true;
 	}
@@ -131,6 +132,7 @@ public class InterestPointList
 	public String getInterestPointsExt() { return ".ip.txt"; }
 	public String getCorrespondencesExt() { return ".corr.txt"; }
 
+	@Override
 	public boolean saveInterestPoints( final boolean forceWrite )
 	{
 		if ( !modifiedInterestPoints && !forceWrite )
@@ -144,7 +146,7 @@ public class InterestPointList
 		try
 		{
 			final File dir = new File( getBaseDir(), getFile().getParent() );
-			
+
 			if ( !dir.exists() )
 			{
 				IOFunctions.println( "Creating directory: " + dir );
@@ -177,6 +179,7 @@ public class InterestPointList
 		}
 	}
 
+	@Override
 	public boolean saveCorrespondingInterestPoints( final boolean forceWrite )
 	{
 		if ( !modifiedCorrespondingInterestPoints && !forceWrite )
@@ -229,6 +232,7 @@ public class InterestPointList
 		}
 	}
 
+	@Override
 	protected boolean loadCorrespondences()
 	{
 		try
@@ -272,6 +276,7 @@ public class InterestPointList
 		}
 	}
 
+	@Override
 	protected boolean loadInterestPoints()
 	{
 		try
@@ -311,5 +316,21 @@ public class InterestPointList
 			e.printStackTrace();
 			return false;
 		}
+	}
+
+	@Override
+	public boolean deleteInterestPoints()
+	{
+		final File ip = new File( getBaseDir(), getFile().toString() + getInterestPointsExt() );
+
+		return ip.delete();
+	}
+
+	@Override
+	public boolean deleteCorrespondingInterestPoints()
+	{
+		final File corr = new File( getBaseDir(), getFile().toString() + getCorrespondencesExt() );
+
+		return corr.delete();
 	}
 }

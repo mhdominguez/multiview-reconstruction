@@ -76,7 +76,7 @@ public class SimView implements MultiViewDatasetDefinition
 	public static boolean defaultLittleEndian = true;
 
 	@Override
-	public SpimData2 createDataset()
+	public SpimData2 createDataset( final String xmlFileName )
 	{
 		final File rootDir = queryRootDir();
 
@@ -148,7 +148,7 @@ public class SimView implements MultiViewDatasetDefinition
 		
 		// create the initial view interest point object
 		final ViewInterestPoints viewInterestPoints = new ViewInterestPoints();
-		viewInterestPoints.createViewInterestPoints( sequenceDescription.getViewDescriptions() );
+		//viewInterestPoints.createViewInterestPoints( sequenceDescription.getViewDescriptions() );
 
 		// finally create the SpimData itself based on the sequence description and the view registration
 		final SpimData2 spimData = new SpimData2( new File( directory ), sequenceDescription, viewRegistrations, viewInterestPoints, new BoundingBoxes(), new PointSpreadFunctions(), new StitchingResults(), new IntensityAdjustments() );
@@ -362,7 +362,7 @@ public class SimView implements MultiViewDatasetDefinition
 	{
 		defaultDir = "/nrs/aic/Wait/for_stephan/Run2_20190909_155416";
 
-		SpimData2 sd = new SimView().createDataset();
+		SpimData2 sd = new SimView().createDataset( "dataset.xml");
 
 		if ( sd == null )
 			IOFunctions.println( "Failed to define dataset.");

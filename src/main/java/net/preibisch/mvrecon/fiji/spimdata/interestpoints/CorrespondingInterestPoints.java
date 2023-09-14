@@ -22,6 +22,8 @@
  */
 package net.preibisch.mvrecon.fiji.spimdata.interestpoints;
 
+import java.io.Serializable;
+
 import mpicbg.spim.data.sequence.ViewId;
 
 /**
@@ -29,58 +31,73 @@ import mpicbg.spim.data.sequence.ViewId;
  * 
  * @author Stephan Preibisch (stephan.preibisch@gmx.de)
  */
-public class CorrespondingInterestPoints implements Comparable< CorrespondingInterestPoints >
+public class CorrespondingInterestPoints implements Comparable< CorrespondingInterestPoints >, Serializable
 {
+	private static final long serialVersionUID = -3165385812553510745L;
+
 	/**
-	 * The detection id of the interest point in this {@link InterestPointList}
+	 * The detection id of the interest point in this {@link InterestPoints}
 	 */
 	final int detectionId;
 	
 	/**
 	 * The {@link ViewId} the corresponding interest point belongs to
 	 */
-	final ViewId correspondingViewId;
+	//final ViewId correspondingViewId;
+	final int correspondingViewIdTP, correspondingViewIdSetup;
 	
 	/**
-	 * The label of {@link InterestPointList} as stored in the {@link ViewInterestPointLists} HashMap
+	 * The label of {@link InterestPoints} as stored in the {@link ViewInterestPointLists} HashMap
 	 */
 	final String correspondingLabel;
 	
 	/**
-	 * The detection id of the corresponding interest point in the {@link InterestPointList}
+	 * The detection id of the corresponding interest point in the {@link InterestPoints}
 	 */
 	final int correspondingDetectionId;
 
 	public CorrespondingInterestPoints( final CorrespondingInterestPoints c )
 	{
-		this( c.detectionId, c.correspondingViewId, c.correspondingLabel, c.correspondingDetectionId );
+		this( c.detectionId, c.correspondingViewIdTP, c.correspondingViewIdSetup, c.correspondingLabel, c.correspondingDetectionId );
 	}
 
 	public CorrespondingInterestPoints( final int detectionId, final ViewId correspondingViewId, final String correspondingLabel, final int correspondingDetectionId )
 	{
 		this.detectionId = detectionId;
-		this.correspondingViewId = correspondingViewId;
+		//this.correspondingViewId = correspondingViewId;
+		this.correspondingViewIdTP = correspondingViewId.getTimePointId();
+		this.correspondingViewIdSetup = correspondingViewId.getViewSetupId();
+		this.correspondingLabel = correspondingLabel;
+		this.correspondingDetectionId = correspondingDetectionId;
+	}
+
+	public CorrespondingInterestPoints( final int detectionId, final int correspondingViewIdTP, final int correspondingViewIdSetup, final String correspondingLabel, final int correspondingDetectionId )
+	{
+		this.detectionId = detectionId;
+		//this.correspondingViewId = correspondingViewId;
+		this.correspondingViewIdTP = correspondingViewIdTP;
+		this.correspondingViewIdSetup = correspondingViewIdSetup;
 		this.correspondingLabel = correspondingLabel;
 		this.correspondingDetectionId = correspondingDetectionId;
 	}
 
 	/**
-	 * @return The detection id of the interest point in this {@link InterestPointList}
+	 * @return The detection id of the interest point in this {@link InterestPoints}
 	 */
 	final public int getDetectionId() { return detectionId; }
 
 	/**
 	 * @return The {@link ViewId} the corresponding interest point belongs to
 	 */
-	final public ViewId getCorrespondingViewId() { return correspondingViewId; }
+	final public ViewId getCorrespondingViewId() { return new ViewId( correspondingViewIdTP, correspondingViewIdSetup ); }
 	
 	/**
-	 * @return The label of {@link InterestPointList} as stored in the {@link ViewInterestPointLists} HashMap
+	 * @return The label of {@link InterestPoints} as stored in the {@link ViewInterestPointLists} HashMap
 	 */
 	final public String getCorrespodingLabel() { return correspondingLabel; }
 	
 	/**
-	 * @return The detection id of the corresponding interest point in the {@link InterestPointList}
+	 * @return The detection id of the corresponding interest point in the {@link InterestPoints}
 	 */
 	final public int getCorrespondingDetectionId() { return correspondingDetectionId; }
 
@@ -91,6 +108,7 @@ public class CorrespondingInterestPoints implements Comparable< CorrespondingInt
 	@Override
 	public int compareTo( final CorrespondingInterestPoints o )
 	{
+		/*
 		if ( getCorrespondingViewId().getTimePointId() == o.getCorrespondingViewId().getTimePointId() )
 		{
 			if ( getCorrespondingViewId().getViewSetupId() == o.getCorrespondingViewId().getViewSetupId() )
@@ -105,6 +123,22 @@ public class CorrespondingInterestPoints implements Comparable< CorrespondingInt
 		else
 		{
 			return getCorrespondingViewId().getTimePointId() - o.getCorrespondingViewId().getTimePointId();
+		}
+		*/
+		if ( correspondingViewIdTP == o.correspondingViewIdTP )
+		{
+			if ( correspondingViewIdSetup == o.correspondingViewIdSetup )
+			{
+				return getCorrespondingDetectionId() - o.getCorrespondingDetectionId();
+			}
+			else
+			{
+				return correspondingViewIdSetup - o.correspondingViewIdSetup;
+			}
+		}
+		else
+		{
+			return correspondingViewIdTP - o.correspondingViewIdTP;
 		}
 	}
 }

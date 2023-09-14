@@ -24,6 +24,7 @@ package net.preibisch.mvrecon.fiji.plugin.interestpointregistration;
 
 import ij.gui.GenericDialog;
 import mpicbg.models.AbstractModel;
+import mpicbg.models.Affine3D;
 import mpicbg.models.AffineModel3D;
 import mpicbg.models.IdentityModel;
 import mpicbg.models.InterpolatedAffineModel3D;
@@ -56,7 +57,7 @@ public class TransformationModelGUI
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public AbstractModel getModel()
+	public < M extends AbstractModel<M> & Affine3D<M>> M getModel()
 	{
 		AbstractModel<?> model;
 		
@@ -76,10 +77,10 @@ public class TransformationModelGUI
 			else if ( regularizedModelIndex == 2 )
 				model = new InterpolatedAffineModel3D( model, new RigidModel3D(), (float)lambda );
 			else if ( regularizedModelIndex == 3 )
-				model = new InterpolatedAffineModel3D( model, new AffineModel3D(), (float)lambda );			 
+				model = new InterpolatedAffineModel3D( model, new AffineModel3D(), (float)lambda );
 		}
 
-		return model;
+		return (M)model;
 	}
 
 	public boolean queryRegularizedModel()
@@ -87,7 +88,7 @@ public class TransformationModelGUI
 		final GenericDialog gd = new GenericDialog( "Regularization Parameters" );
 
 		gd.addChoice( "Model_to_regularize_with", regularizationModelChoice, regularizationModelChoice[ defaultRegularizationModelIndex ] );
-		gd.addNumericField( "Lamba", defaultLambda, 2 );
+		gd.addNumericField( "Lambda", defaultLambda, 2 );
 
 		gd.showDialog();
 
