@@ -31,17 +31,17 @@ import net.imglib2.RandomAccessible;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 
-public class FusedRandomAccess extends AbstractLocalizableInt implements RandomAccess< FloatType >
+public class FusedRandomAccessFirstWins extends AbstractLocalizableInt implements RandomAccess< FloatType >
 {
 	final List< ? extends RandomAccessible< FloatType > > images;
 	final List< ? extends RandomAccessible< FloatType > > weights;
 
-	final protected int numImages;
+	final int numImages;
 	final protected RandomAccess< ? extends RealType< ? > >[] i, w;
 
-	final protected FloatType value = new FloatType();
+	final FloatType value = new FloatType();
 
-	public FusedRandomAccess(
+	public FusedRandomAccessFirstWins(
 			final int n,
 			final List< ? extends RandomAccessible< FloatType > > images,
 			final List< ? extends RandomAccessible< FloatType > > weights )
@@ -66,44 +66,36 @@ public class FusedRandomAccess extends AbstractLocalizableInt implements RandomA
 	@Override
 	public FloatType get()
 	{
-		double sumI = 0;
-		double sumW = 0;
-
 		for ( int j = 0; j < numImages; ++j )
 		{
 			final double weight = w[ j ].get().getRealDouble();
 
-			if ( weight == 0 )
-				continue;
-
-			final double intensity = i[ j ].get().getRealDouble();
-
-			sumI += intensity * weight;
-			sumW += weight;
+			// first one with data wins
+			if ( weight > 0 )
+			{
+				value.set( (float) i[ j ].get().getRealDouble() );
+				return value;
+			}
 		}
 
-		if ( sumW > 0 )
-			value.set( (float)( sumI / sumW ) );
-		else
-			value.set( 0 );
+		value.set( 0 );
 
 		return value;
 	}
 
 	@Override
-	public FusedRandomAccess copy()
+	public FusedRandomAccessFirstWins copy()
 	{
 		return copyRandomAccess();
 	}
 
 	@Override
-	public FusedRandomAccess copyRandomAccess()
+	public FusedRandomAccessFirstWins copyRandomAccess()
 	{
-		final FusedRandomAccess r = new FusedRandomAccess( n, images, weights );
+		final FusedRandomAccessFirstWins r = new FusedRandomAccessFirstWins( n, images, weights );
 		r.setPosition( this );
 		return r;
 	}
-
 	@Override
 	public void fwd( final int d )
 	{
@@ -252,5 +244,4 @@ public class FusedRandomAccess extends AbstractLocalizableInt implements RandomA
 			w[ j ].setPosition( pos, d );
 		}
 	}
-
 }

@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2023 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2024 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -25,6 +25,7 @@ package net.preibisch.mvrecon.process.fusion;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -490,6 +491,9 @@ public class FusionTools
 
 		final ArrayList< RandomAccessibleInterval< FloatType > > images = new ArrayList<>();
 		final ArrayList< RandomAccessibleInterval< FloatType > > weights = new ArrayList<>();
+
+		// to be able to use the "lowest ViewId" wins strategy
+		Collections.sort( viewIdsToProcess );
 
 		for ( final ViewId viewId : viewIdsToProcess )
 		{
