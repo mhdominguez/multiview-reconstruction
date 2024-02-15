@@ -23,9 +23,8 @@
 package util;
 
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.converter.Converter;
+import net.imglib2.converter.Converters;
 import net.imglib2.converter.RealFloatConverter;
-import net.imglib2.converter.read.ConvertedRandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
@@ -45,16 +44,9 @@ public class ImgLib2Tools
 		final float minf = (float)min;
 		final float maxf = (float)max;
 		
-		return new ConvertedRandomAccessibleInterval<T, FloatType>(
+		return Converters.convert(
 				img,
-				new Converter<T, FloatType>()
-				{
-					@Override
-					public void convert( final T input, final FloatType output)
-					{
-						output.set( ( input.getRealFloat() - minf ) / ( maxf - minf ) );
-					}
-				},
+				( input, output ) -> output.set( ( input.getRealFloat() - minf ) / ( maxf - minf ) ),
 				new FloatType() );
 	}
 

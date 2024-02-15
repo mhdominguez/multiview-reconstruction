@@ -68,8 +68,7 @@ import net.imglib2.cache.img.ReadOnlyCachedCellImgOptions;
 import net.imglib2.cache.img.SingleCellArrayImg;
 import net.imglib2.cache.img.optional.CacheOptions.CacheType;
 import net.imglib2.converter.RealFloatConverter;
-import net.imglib2.converter.read.ConvertedRandomAccessible;
-import net.imglib2.converter.read.ConvertedRandomAccessibleInterval;
+import net.imglib2.converter.Converters;
 import net.imglib2.img.Img;
 import net.imglib2.img.ImgFactory;
 import net.imglib2.img.cell.CellImgFactory;
@@ -475,7 +474,7 @@ public class FusionTools
 			RandomAccessibleInterval inputImg = DownsampleTools.openDownsampled( imgloader, viewId, model );
 
 			if ( intensityAdjustments != null && intensityAdjustments.containsKey( viewId ) )
-				inputImg = new ConvertedRandomAccessibleInterval< FloatType, FloatType >(
+				inputImg = Converters.convert(
 						convertInput( inputImg ),
 						new IntensityAdjuster( intensityAdjustments.get( viewId ) ),
 						new FloatType() );
@@ -585,7 +584,7 @@ public class FusionTools
 		}
 		else
 		{
-			return Views.interval( new ConvertedRandomAccessible< T, FloatType >(
+			return Views.interval( Converters.convert(
 						img,
 						new RealFloatConverter< T >(),
 						new FloatType() ), img );
