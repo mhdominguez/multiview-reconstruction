@@ -47,15 +47,15 @@ import mpicbg.spim.data.generic.sequence.BasicViewDescription;
 import mpicbg.spim.data.generic.sequence.BasicViewSetup;
 import mpicbg.spim.data.sequence.ViewId;
 
-public class InterestPointExplorer< AS extends SpimData2, X extends XmlIoAbstractSpimData< ?, AS > >
+public class InterestPointExplorer< AS extends SpimData2 >
 	implements SelectedViewDescriptionListener< AS >
 {
 	final String xml;
 	final JFrame frame;
 	final InterestPointExplorerPanel panel;
-	final FilteredAndGroupedExplorer< AS, X > viewSetupExplorer;
+	final FilteredAndGroupedExplorer< AS > viewSetupExplorer;
 
-	public InterestPointExplorer( final String xml, final X io, final FilteredAndGroupedExplorer< AS, X > viewSetupExplorer )
+	public InterestPointExplorer( final String xml, final XmlIoAbstractSpimData< ?, AS > io, final FilteredAndGroupedExplorer< AS > viewSetupExplorer )
 	{
 		this.xml = xml;
 		this.viewSetupExplorer = viewSetupExplorer;
@@ -92,12 +92,12 @@ public class InterestPointExplorer< AS extends SpimData2, X extends XmlIoAbstrac
 	public JFrame frame() { return frame; }
 
 	@Override
-	public void selectedViewDescriptions( final List< List< BasicViewDescription< ? extends BasicViewSetup > > > viewDescriptions )
+	public void selectedViewDescriptions( final List< List< BasicViewDescription< ? > > > viewDescriptions )
 	{
-		final ArrayList< BasicViewDescription< ? extends BasicViewSetup > > fullList = new ArrayList<>();
+		final ArrayList< BasicViewDescription< ? > > fullList = new ArrayList<>();
 
-		for ( final List< BasicViewDescription< ? extends BasicViewSetup > > list : viewDescriptions )
-			for ( final BasicViewDescription< ? extends BasicViewSetup > vd : list )
+		for ( final List< BasicViewDescription< ? > > list : viewDescriptions )
+			for ( final BasicViewDescription< ? > vd : list )
 				if ( vd.isPresent() )
 					fullList.add( vd );
 
