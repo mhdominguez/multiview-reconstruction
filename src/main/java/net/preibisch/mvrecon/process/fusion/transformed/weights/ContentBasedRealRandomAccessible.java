@@ -72,7 +72,7 @@ public class ContentBasedRealRandomAccessible< T extends RealType< T > > impleme
 		
 		this.contentBasedImg = approximateEntropy(
 				//new ConvertedRandomAccessibleInterval< T, FloatType >( input, new RealFloatConverter< T >(),  new FloatType() ),
-				Converters.convert( input, new RealFloatConverter< T >(),  new FloatType() )
+				Converters.convert( input, new RealFloatConverter< T >(),  new FloatType() ),
 				imgFactory,
 				sigma1,
 				sigma2 );
