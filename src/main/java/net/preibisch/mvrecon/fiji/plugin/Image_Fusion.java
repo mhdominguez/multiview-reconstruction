@@ -43,7 +43,8 @@ import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.converter.RealUnsignedShortConverter;
-import net.imglib2.converter.read.ConvertedRandomAccessibleInterval;
+//import net.imglib2.converter.read.ConvertedRandomAccessibleInterval;
+import net.imglib2.converter.Converters;
 import net.imglib2.img.ImagePlusAdapter;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.img.imageplus.ImagePlusImgFactory;
@@ -308,7 +309,8 @@ public class Image_Fusion implements PlugIn
 				IOFunctions.println( "(" + new Date( System.currentTimeMillis() ) + "): Range for conversion to 16-bit, min=" + minmax[ 0 ] + ", max=" + minmax[ 1 ] );
 
 				if ( !cacheAndExport(
-						new ConvertedRandomAccessibleInterval< FloatType, UnsignedShortType >(
+						Converters.convert(
+						//new ConvertedRandomAccessibleInterval< FloatType, UnsignedShortType >(
 								virtual, new RealUnsignedShortConverter<>( minmax[ 0 ], minmax[ 1 ] ), new UnsignedShortType() ),
 						taskExecutor, new UnsignedShortType(), fusion, exporter, group, minmax ) )
 					return false;

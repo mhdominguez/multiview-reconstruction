@@ -33,10 +33,12 @@ public class ImgLib2Tools
 {
 	public static final < T extends RealType< T > > RandomAccessibleInterval<FloatType> convertVirtual( final RandomAccessibleInterval< T > img )
 	{
+		return Converters.convertRAI( img, (i,o) -> o.set( i.getRealFloat() ), new FloatType());
+		/*
 		return new ConvertedRandomAccessibleInterval<T, FloatType>(
 				img,
 				new RealFloatConverter<T>(),
-				new FloatType() );
+				new FloatType() );*/
 	}
 
 	public static final < T extends RealType< T > > RandomAccessibleInterval<FloatType> normalizeVirtual( final RandomAccessibleInterval< T > img, final double min, final double max )
