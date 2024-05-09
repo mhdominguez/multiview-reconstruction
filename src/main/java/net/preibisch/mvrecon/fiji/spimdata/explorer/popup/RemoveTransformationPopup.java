@@ -117,7 +117,7 @@ public class RemoveTransformationPopup extends JMenu implements ExplorerWindowSe
 				}
 				else
 				{
-					String matrixString = formatMatrix(v.getTransformList().get(0).getRowPackedCopy());
+					String matrixString = formatMatrix( v.getTransformList().get( 0 ).asAffine3D().getRowPackedCopy() );
                     copyToClipboard(matrixString);
 				}
 				v.updateModel();
