@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2024 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -26,6 +26,10 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
+
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 
@@ -44,7 +48,7 @@ public class RemoveTransformationPopup extends JMenu implements ExplorerWindowSe
 
 	ExplorerWindow< ? > panel;
 
-	protected static String[] types = new String[]{ "Latest/Newest Transformation", "First/Oldest Transformation" };
+	protected static String[] types = new String[]{ "Latest/Newest Transformation", "First/Oldest Transformation", "Copy Latest (Do Not Remove" };
 
 	public RemoveTransformationPopup()
 	{
@@ -52,12 +56,15 @@ public class RemoveTransformationPopup extends JMenu implements ExplorerWindowSe
 
 		final JMenuItem lastest = new JMenuItem( types[ 0 ] );
 		final JMenuItem oldest = new JMenuItem( types[ 1 ] );
+		final JMenuItem copyLatest = new JMenuItem( types[ 2 ] );
 
 		lastest.addActionListener( new MyActionListener( 0 ) );
 		oldest.addActionListener( new MyActionListener( 1 ) );
+		copyLatest.addActionListener( new MyActionListener( 2 ) );
 
 		this.add( lastest );
 		this.add( oldest );
+		this.add( copyLatest );
 	}
 
 	@Override
@@ -101,15 +108,37 @@ public class RemoveTransformationPopup extends JMenu implements ExplorerWindowSe
 					continue;
 
 				if ( index == 0 )
+				{
 					v.getTransformList().remove( 0 );
-				else
+				}
+				else if ( index == 1 )
+				{
 					v.getTransformList().remove( v.getTransformList().size() - 1 );
-
+				}
+				else
+				{
+					String matrixString = formatMatrix(v.getTransformList().get(0).getRowPackedCopy());
+                    copyToClipboard(matrixString);
+				}
 				v.updateModel();
 			}
 
 			panel.updateContent();
 			panel.bdvPopup().updateBDV();
 		}
+	}
+
+	private String formatMatrix(double[] matrix) {
+		StringBuilder sb = new StringBuilder();
+		for (double element : matrix)
+			sb.append(element).append(" ");
+
+		return sb.toString().trim();
+	}
+
+	private void copyToClipboard(String text) {
+		StringSelection selection = new StringSelection(text);
+		Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+		clipboard.setContents(selection, selection);
 	}
 }
