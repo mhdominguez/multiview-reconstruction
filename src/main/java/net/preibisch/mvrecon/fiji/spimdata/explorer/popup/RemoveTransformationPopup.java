@@ -48,7 +48,7 @@ public class RemoveTransformationPopup extends JMenu implements ExplorerWindowSe
 
 	ExplorerWindow< ? > panel;
 
-	protected static String[] types = new String[]{ "Latest/Newest Transformation", "First/Oldest Transformation", "Copy Latest (Do Not Remove" };
+	protected static String[] types = new String[]{ "Latest/Newest Transformation", "First/Oldest Transformation", "Copy Latest (Do Not Remove)" };
 
 	public RemoveTransformationPopup()
 	{
@@ -131,7 +131,7 @@ public class RemoveTransformationPopup extends JMenu implements ExplorerWindowSe
 	private String formatMatrix(double[] matrix) {
 		StringBuilder sb = new StringBuilder();
 		for (double element : matrix)
-			sb.append(element).append(" ");
+			sb.append(element).append(", ");
 
 		return sb.toString().trim();
 	}
