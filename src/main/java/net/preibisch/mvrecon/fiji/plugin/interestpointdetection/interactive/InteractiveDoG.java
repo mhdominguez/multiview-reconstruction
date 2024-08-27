@@ -3,7 +3,7 @@
  * Software for the reconstruction of multi-view microscopic acquisitions
  * like Selective Plane Illumination Microscopy (SPIM) Data.
  * %%
- * Copyright (C) 2012 - 2022 Multiview Reconstruction developers.
+ * Copyright (C) 2012 - 2024 Multiview Reconstruction developers.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -104,7 +104,7 @@ public class InteractiveDoG
 	public static final float sigmaMin = 0.5f;
 	public static final float sigmaMax = 10f;
 	public static final float thresholdMin = 0.00001f;
-	public static final float thresholdMax = 1f;
+	public static final float thresholdMax = 0.3f;
 	
 	final int scrollbarSize = 1000;
 	// ----------------------------------------
@@ -265,11 +265,11 @@ public class InteractiveDoG
 				min = new long []{
 						rectangle.x,
 						rectangle.y,
-						Math.max( imgTmp.min( 2 ), currentSlice - 1 ) };
+						Math.max( imgTmp.min( 2 ), currentSlice - (long) (2.5 * Math.ceil(params.sigma) ) ) };
 				max = new long []{
 						rectangle.width + rectangle.x - 1,
 						rectangle.height + rectangle.y - 1,
-						Math.min( imgTmp.max( 2 ), currentSlice + 1 ) };
+						Math.min( imgTmp.max( 2 ), currentSlice + (long) (2.5 * Math.ceil(params.sigma) ) ) };
 			}
 			else { // 2d or 2d+t case
 
@@ -296,8 +296,8 @@ public class InteractiveDoG
 		}
 
 		final double radius = ( ( params.sigma + HelperFunctions.computeSigma2( params.sigma, sensitivity ) ) / 2.0 );
-		final ArrayList< RefinedPeak< Point > > filteredPeaksMax = HelperFunctions.filterPeaks( peaksMax, rectangle, params.threshold );
-		final ArrayList< RefinedPeak< Point > > filteredPeaksMin = HelperFunctions.filterPeaks( peaksMin, rectangle, params.threshold );
+		final ArrayList< RefinedPeak< Point > > filteredPeaksMax = HelperFunctions.filterPeaks( peaksMax, rectangle, params.threshold / 2.5 ); // correction factor of 2.5 applied to match thresholding in final DoG IP detection
+		final ArrayList< RefinedPeak< Point > > filteredPeaksMin = HelperFunctions.filterPeaks( peaksMin, rectangle, params.threshold / 2.5 ); // correction factor of 2.5 applied to match thresholding in
 
 		HelperFunctions.drawRealLocalizable( filteredPeaksMax, imagePlus, radius, Color.RED, true );
 		HelperFunctions.drawRealLocalizable( filteredPeaksMin, imagePlus, radius, Color.GREEN, false );
